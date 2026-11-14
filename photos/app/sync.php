@@ -8,15 +8,18 @@
  */
 declare(strict_types=1);
 
-if (PHP_SAPI !== 'cli') {
+// Refuse web requests. (Some hosts, Bluehost among them, run cron jobs with
+// the CGI build of PHP, so PHP_SAPI can't be used to tell them apart.)
+if (isset($_SERVER['REQUEST_METHOD']) || isset($_SERVER['REMOTE_ADDR'])) {
     http_response_code(403);
     exit('Run this from the command line or a cron job.');
 }
 
 require __DIR__ . '/bootstrap.php';
 
-$force = in_array('--force', $argv, true);
-$quiet = in_array('--quiet', $argv, true);
+$args = $_SERVER['argv'] ?? [];
+$force = in_array('--force', $args, true);
+$quiet = in_array('--quiet', $args, true);
 
 try {
     $sync = new Sync(make_source(), $quiet ? null : static function (string $m): void {
