@@ -19,7 +19,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['password'])) {
     $error = 'That password isn’t right. Try again.';
 }
 if (isset($_GET['signout'])) {
+    // Sign out completely: the gallery password and, for the owner, the
+    // admin sign-in too (which would otherwise keep letting this browser in).
     set_visitor_cookie(false);
+    set_owner_cookie(false);
     header('Location: ./');
     exit;
 }
