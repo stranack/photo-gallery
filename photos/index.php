@@ -132,6 +132,7 @@ head_html($title, $css); ?>
   <button class="lb-nav lb-prev" id="lb-prev" type="button" aria-label="Previous photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4 7 12l8 8" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></button>
   <button class="lb-nav lb-next" id="lb-next" type="button" aria-label="Next photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 4 8 8-8 8" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></button>
   <p class="lb-cap" id="lb-cap"></p>
+  <div class="lb-strip" id="lb-strip" aria-label="All photos in this album"></div>
   <?php if ($owner): ?>
   <form class="cap-edit" id="cap-edit" hidden>
     <label for="cap-text">Caption</label>

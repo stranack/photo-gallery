@@ -136,6 +136,7 @@
     lb.open = true;
     lbEl.hidden = false;
     document.body.style.overflow = 'hidden';
+    buildStrip();
     show(false);
     if (play) startShow(); else stopShow();
     wake();
@@ -155,6 +156,7 @@
     $('lb-cap').textContent = p.cap || '';
     syncViewerFav();
     closeEditor();
+    markStrip();
     var next = new Image();
     var swap = function () {
       if (token !== lb.token) return;
@@ -182,6 +184,35 @@
     lb.i = (lb.i + d + lb.list.length) % lb.list.length;
     show(!!fade);
   }
+  // ---- Filmstrip of every photo in the album --------------------------
+  var strip = $('lb-strip');
+  function buildStrip() {
+    var h = window.innerWidth < 760 ? 54 : 76;
+    strip.innerHTML = lb.list.map(function (p, i) {
+      var w = Math.round(h * Math.min(Math.max(p.w / p.h, 0.6), 1.8));
+      return '<button type="button" data-i="' + i + '" style="width:' + w + 'px" aria-label="Photo ' + (i + 1) + (p.cap ? ': ' + esc(p.cap) : '') + '">' +
+        '<img src="' + esc(p.g) + '" alt="" loading="lazy" decoding="async"></button>';
+    }).join('');
+    strip.hidden = lb.list.length < 2;
+  }
+  function markStrip() {
+    var prev = strip.querySelector('.on');
+    if (prev) { prev.classList.remove('on'); prev.removeAttribute('aria-current'); }
+    var b = strip.querySelector('[data-i="' + lb.i + '"]');
+    if (!b) return;
+    b.classList.add('on');
+    b.setAttribute('aria-current', 'true');
+    strip.scrollTo({ left: b.offsetLeft - strip.clientWidth / 2 + b.offsetWidth / 2 });
+  }
+  strip.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-i]');
+    if (!b) return;
+    e.stopPropagation();
+    lb.i = parseInt(b.getAttribute('data-i'), 10);
+    show(false);
+    wake();
+  });
+
   function syncViewerFav() {
     var p = lb.list[lb.i];
     if (p) $('lb-fav').setAttribute('aria-pressed', String(isFav(p.id)));
@@ -193,11 +224,12 @@
     lbEl.classList.add('playing');
     $('lb-play').setAttribute('aria-label', 'Pause slideshow');
     lb.timer = setInterval(function () { go(1, true); }, (G.slideshowSeconds || 5) * 1000);
+    wake();
   }
   function stopShow() {
     clearInterval(lb.timer);
     lb.timer = null;
-    lbEl.classList.remove('playing');
+    lbEl.classList.remove('playing', 'idle');
     $('lb-play').setAttribute('aria-label', 'Play slideshow');
   }
   function toggleShow() { if (lb.timer) stopShow(); else { startShow(); go(1, true); } }
@@ -207,7 +239,7 @@
     lbEl.classList.remove('idle');
     clearTimeout(lb.idleTimer);
     lb.idleTimer = setTimeout(function () {
-      if (lb.open && !editing()) lbEl.classList.add('idle');
+      if (lb.open && lb.timer && !editing()) lbEl.classList.add('idle');
     }, 2800);
   }
 
