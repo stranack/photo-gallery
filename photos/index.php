@@ -10,8 +10,15 @@ $subtitle = (string) cfg('site_subtitle', '');
 $error = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['password'])) {
-    if (gallery_password_usable() && hash_equals((string) cfg('gallery_password'), (string) $_POST['password'])) {
+    $typed = (string) $_POST['password'];
+    if (gallery_password_usable() && hash_equals((string) cfg('gallery_password'), $typed)) {
         set_visitor_cookie(true);
+        header('Location: ./');
+        exit;
+    }
+    // The owner can use the admin password here too; it also turns on caption editing.
+    if (admin_password_usable() && hash_equals((string) cfg('admin_password'), $typed)) {
+        set_owner_cookie(true);
         header('Location: ./');
         exit;
     }

@@ -43,7 +43,7 @@ Captions come from the file names made by `prefix_photo_dates.py`:
 | `1991_14.jpg` | 1991 |
 | `DSC_4399 (1).jpeg` | (no caption) |
 
-To write your own caption, sign in to `admin.php` once on your browser, open a photo in the gallery and click the pencil. **Save** keeps your words and **Use automatic** goes back to the caption from the file name. Saving an empty caption hides it for that photo. Your captions are saved on the site (in `data/captions.json`) and stay with the photo if you rename or move it within the albums folder.
+To write your own caption, sign in with your admin password, either on the gallery's password page or at `admin.php`. Then open a photo in the gallery and click the pencil. **Save** keeps your words and **Use automatic** goes back to the caption from the file name. Saving an empty caption hides it for that photo. Your captions are saved on the site (in `data/captions.json`) and stay with the photo if you rename or move it within the albums folder.
 
 ## Requirements
 
