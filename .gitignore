@@ -1,0 +1,10 @@
+# Your settings: holds the passwords and Dropbox app secret
+photos/app/config.php
+
+# Created by the sync on the server
+photos/data/*
+!photos/data/.htaccess
+photos/images/*
+!photos/images/.htaccess
+
+.DS_Store

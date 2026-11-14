@@ -1,0 +1,29 @@
+# Photo Gallery
+DirectoryIndex index.php
+Options -Indexes
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType text/javascript "access plus 1 month"
+  ExpiresByType image/svg+xml "access plus 1 month"
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "same-origin"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set X-Robots-Tag "noindex, nofollow"
+</IfModule>
+
+# Never serve stray JSON state, logs or lock files, wherever they end up.
+<FilesMatch "\.(json|log|lock|md|tmp\d*)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
