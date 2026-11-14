@@ -32,7 +32,7 @@ jobs:
       - name: Pull latest commit into cPanel-managed repo
         if: steps.token.outputs.ready == 'yes'
         run: |
-          resp=$(curl -sS -H "Authorization: cpanel ${CPANEL_USER}:${TOKEN}" \
+          resp=$(curl -sS --retry 4 --retry-all-errors --retry-delay 15 --connect-timeout 20 -H "Authorization: cpanel ${CPANEL_USER}:${TOKEN}" \
             "https://${CPANEL_HOST}:2083/execute/VersionControl/update?repository_root=${REPO_ROOT}&branch=main")
           echo "$resp"
           status=$(echo "$resp" | python3 -c "import json,sys;print(json.load(sys.stdin).get('status',0))" 2>/dev/null || echo 0)
@@ -44,7 +44,7 @@ jobs:
       - name: Deploy HEAD commit (.cpanel.yml tasks)
         if: steps.token.outputs.ready == 'yes'
         run: |
-          resp=$(curl -sS -H "Authorization: cpanel ${CPANEL_USER}:${TOKEN}" \
+          resp=$(curl -sS --retry 4 --retry-all-errors --retry-delay 15 --connect-timeout 20 -H "Authorization: cpanel ${CPANEL_USER}:${TOKEN}" \
             "https://${CPANEL_HOST}:2083/execute/VersionControlDeployment/create?repository_root=${REPO_ROOT}")
           echo "$resp"
           status=$(echo "$resp" | python3 -c "import json,sys;print(json.load(sys.stdin).get('status',0))" 2>/dev/null || echo 0)
