@@ -47,7 +47,7 @@ To write your own caption, sign in to `admin.php` once on your browser, open a p
 
 ## Requirements
 
-- PHP 8.1 or newer with the `curl` and `json` extensions, standard on shared hosts
+- PHP 8.0 or newer with the `curl` and `json` extensions, standard on shared hosts
 - Apache or LiteSpeed with `.htaccess` support, which keeps the settings, data and photo copies private
 - A cron job, or a free web cron service, to run the hourly sync
 

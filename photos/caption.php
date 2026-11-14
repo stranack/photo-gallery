@@ -11,7 +11,7 @@ require __DIR__ . '/app/bootstrap.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
-function reply(int $code, array $body): never
+function reply(int $code, array $body): void
 {
     http_response_code($code);
     echo json_encode($body);
