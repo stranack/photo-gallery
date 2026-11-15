@@ -101,23 +101,74 @@ function load_gallery(): array
     return read_json(GALLERY_FILE, ['albums' => [], 'cover' => null]);
 }
 
-/** Caption overrides: photo id => text ("" means no caption). */
-function load_captions(): array
+const CAPTION_FIELDS = ['title', 'date', 'location', 'description'];
+
+/** Date and location read from the file name; title and description start empty. */
+function auto_fields(string $file): array
 {
-    return read_json(CAPTIONS_FILE, []);
+    $p = parse_photo_name($file);
+    return ['title' => '', 'date' => $p['date_label'], 'location' => $p['place'], 'description' => ''];
 }
 
-function save_caption(string $id, ?string $text): void
+/**
+ * Caption details you've written: photo id => fields you set. A field that's
+ * missing follows the automatic value; one set to "" is deliberately blank.
+ * Captions saved by the earlier single-line editor become the description,
+ * with date and location left blank, since they replaced the whole caption.
+ */
+function load_captions(): array
+{
+    $out = [];
+    foreach (read_json(CAPTIONS_FILE, []) as $id => $v) {
+        if (is_string($v)) {
+            $out[$id] = ['date' => '', 'location' => '', 'description' => $v];
+        } elseif (is_array($v)) {
+            $out[$id] = array_intersect_key($v, array_flip(CAPTION_FIELDS));
+        }
+    }
+    return $out;
+}
+
+/** The caption a visitor sees: your fields over the automatic ones. */
+function caption_fields(string $id, string $file, ?array $captions = null): array
+{
+    $captions ??= load_captions();
+    return array_merge(auto_fields($file), $captions[$id] ?? []);
+}
+
+/**
+ * Save the fields from the editor. Date and location are kept only where they
+ * differ from the automatic value, so a renamed file still updates them.
+ * Pass null to go back to automatic for everything.
+ */
+function save_caption(string $id, ?array $fields, string $file): void
 {
     $fh = fopen(CAPTIONS_FILE . '.lock', 'c');
     if ($fh) {
         flock($fh, LOCK_EX);
     }
     $all = load_captions();
-    if ($text === null) {
+    if ($fields === null) {
         unset($all[$id]);
     } else {
-        $all[$id] = mb_substr(trim(preg_replace('/\s+/u', ' ', $text) ?? ''), 0, 500);
+        $auto = auto_fields($file);
+        $keep = [];
+        foreach (CAPTION_FIELDS as $f) {
+            $max = $f === 'description' ? 2000 : 200;
+            $v = (string) ($fields[$f] ?? '');
+            $v = $f === 'description'
+                ? trim(preg_replace("/[ \t]+/u", ' ', str_replace("\r", '', $v)) ?? '')
+                : trim(preg_replace('/\s+/u', ' ', $v) ?? '');
+            $v = mb_substr($v, 0, $max);
+            if ($v !== $auto[$f]) {
+                $keep[$f] = $v;
+            }
+        }
+        if ($keep) {
+            $all[$id] = $keep;
+        } else {
+            unset($all[$id]);
+        }
     }
     write_json(CAPTIONS_FILE, $all);
     if ($fh) {
@@ -126,32 +177,42 @@ function save_caption(string $id, ?string $text): void
     }
 }
 
+/** Find a photo's file name in the gallery index. */
+function photo_file(string $id): ?string
+{
+    foreach (load_gallery()['albums'] ?? [] as $a) {
+        foreach ($a['photos'] as $p) {
+            if ($p['id'] === $id) {
+                return $p['file'];
+            }
+        }
+    }
+    return null;
+}
+
 /** The data the gallery page hands to its script. */
 function gallery_for_page(bool $owner): array
 {
     $g = load_gallery();
     $captions = load_captions();
     $albums = [];
-    $index = [];
     foreach ($g['albums'] ?? [] as $a) {
         $photos = [];
         foreach ($a['photos'] as $p) {
-            $custom = array_key_exists($p['id'], $captions);
             $row = [
                 'id'  => $p['id'],
                 'w'   => $p['w'],
                 'h'   => $p['h'],
                 'g'   => 'img.php?id=' . $p['id'] . '&s=g&v=' . $p['v'],
                 'l'   => 'img.php?id=' . $p['id'] . '&s=l&v=' . $p['v'],
-                'cap' => $custom ? $captions[$p['id']] : $p['auto'],
+                'cap' => caption_fields($p['id'], $p['file'], $captions),
             ];
             if ($owner) {
-                $row['auto'] = $p['auto'];
-                $row['custom'] = $custom;
+                $row['auto'] = auto_fields($p['file']);
+                $row['custom'] = isset($captions[$p['id']]);
                 $row['file'] = $p['file'];
             }
             $photos[] = $row;
-            $index[$p['id']] = $row;
         }
         $albums[] = ['slug' => $a['slug'], 'name' => $a['name'], 'photos' => $photos];
     }

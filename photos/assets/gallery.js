@@ -105,8 +105,8 @@
       row.forEach(function (p) {
         var w = Math.floor(h * (p.w / p.h));
         html += '<div class="tile" role="button" tabindex="0" data-id="' + p.id + '" style="width:' + w + 'px;height:' + Math.round(h) + 'px"' +
-          ' aria-label="' + esc(p.cap || 'Photo') + '">' +
-          '<img src="' + esc(p.g) + '" alt="' + esc(p.cap || '') + '" loading="lazy" decoding="async" width="' + w + '" height="' + Math.round(h) + '" onload="this.classList.add(\'loaded\')">' +
+          ' aria-label="' + esc(label(p) || 'Photo') + '">' +
+          '<img src="' + esc(p.g) + '" alt="' + esc(label(p)) + '" loading="lazy" decoding="async" width="' + w + '" height="' + Math.round(h) + '" onload="this.classList.add(\'loaded\')">' +
           '<button class="fav' + (isFav(p.id) ? ' on' : '') + '" type="button" data-id="' + p.id + '" aria-label="Favourite" aria-pressed="' + isFav(p.id) + '">' + HEART + '</button>' +
           '</div>';
       });
@@ -153,7 +153,7 @@
     var p = lb.list[lb.i];
     var token = ++lb.token;
     $('lb-count').textContent = (lb.i + 1) + ' / ' + lb.list.length;
-    $('lb-cap').textContent = p.cap || '';
+    renderCaption(p);
     syncViewerFav();
     closeEditor();
     markStrip();
@@ -161,7 +161,7 @@
     var swap = function () {
       if (token !== lb.token) return;
       img.src = next.src;
-      img.alt = p.cap || '';
+      img.alt = label(p);
       img.classList.remove('fading');
     };
     if (fade) {
@@ -190,7 +190,7 @@
     var h = window.innerWidth < 760 ? 54 : 76;
     strip.innerHTML = lb.list.map(function (p, i) {
       var w = Math.round(h * Math.min(Math.max(p.w / p.h, 0.6), 1.8));
-      return '<button type="button" data-i="' + i + '" style="width:' + w + 'px" aria-label="Photo ' + (i + 1) + (p.cap ? ': ' + esc(p.cap) : '') + '">' +
+      return '<button type="button" data-i="' + i + '" style="width:' + w + 'px" aria-label="Photo ' + (i + 1) + (label(p) ? ': ' + esc(label(p)) : '') + '">' +
         '<img src="' + esc(p.g) + '" alt="" loading="lazy" decoding="async"></button>';
     }).join('');
     strip.hidden = lb.list.length < 2;
@@ -212,6 +212,22 @@
     show(false);
     wake();
   });
+
+  // ---- Caption under the photo, and making room for it -----------------
+  function renderCaption(p) {
+    var c = p.cap || {};
+    $('cap-title').textContent = c.title || '';
+    $('cap-meta').textContent = [c.date, c.location].filter(Boolean).join(' · ');
+    $('cap-desc').textContent = c.description || '';
+    $('cap-desc').title = c.description || '';
+    fitStage();
+  }
+  function fitStage() {
+    if (!lb.open) return;
+    var below = (strip.hidden ? 12 : strip.offsetHeight) + $('lb-cap').offsetHeight + 8;
+    $('lb-stage').style.bottom = Math.max(below, window.innerWidth < 760 ? 72 : 76) + 'px';
+  }
+  window.addEventListener('resize', fitStage);
 
   function syncViewerFav() {
     var p = lb.list[lb.i];
@@ -250,35 +266,67 @@
     if (!form) return;
     stopShow();
     var p = lb.list[lb.i];
-    $('cap-text').value = p.cap || '';
-    $('cap-auto').textContent = p.auto ? 'Automatic caption: ' + p.auto : 'No automatic caption for ' + (p.file || 'this file') + '.';
+    var c = p.cap || {}, auto = p.auto || {};
+    $('cap-t').value = c.title || '';
+    $('cap-d').value = c.date || '';
+    $('cap-l').value = c.location || '';
+    $('cap-x').value = c.description || '';
+    hint('cap-d', auto.date);
+    hint('cap-l', auto.location);
     $('cap-reset').hidden = !p.custom;
     $('cap-msg').textContent = '';
     form.hidden = false;
     lbEl.classList.remove('idle');
-    $('cap-text').focus();
+    $('cap-t').focus();
+  }
+  // Under date and location: what the file name says, with a way back to it.
+  function hint(field, auto) {
+    var el = $(field + '-hint');
+    var input = $(field);
+    function update() {
+      if (!auto) el.textContent = 'Not in the file name';
+      else if (input.value.trim() === auto) el.textContent = 'From the file name';
+      else {
+        el.innerHTML = 'File name says: ' + esc(auto) + ' · <button type="button">use</button>';
+        el.querySelector('button').onclick = function () { input.value = auto; update(); input.focus(); };
+      }
+    }
+    input.oninput = update;
+    update();
   }
   function closeEditor() { if (form) form.hidden = true; }
   function saveCaption(reset) {
     var p = lb.list[lb.i];
     var body = new URLSearchParams();
     body.set('id', p.id);
-    if (reset) body.set('reset', '1'); else body.set('caption', $('cap-text').value);
+    if (reset) body.set('reset', '1');
+    else {
+      body.set('title', $('cap-t').value);
+      body.set('date', $('cap-d').value);
+      body.set('location', $('cap-l').value);
+      body.set('description', $('cap-x').value);
+    }
     $('cap-msg').textContent = 'Saving…';
     fetch('caption.php', { method: 'POST', body: body, headers: { 'X-CSRF': G.csrf }, credentials: 'same-origin' })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not save'); return j; }); })
       .then(function (j) {
         p.cap = j.caption;
         p.custom = j.custom;
-        $('lb-cap').textContent = p.cap || '';
+        renderCaption(p);
         closeEditor();
         var t = document.querySelector('.tile[data-id="' + p.id + '"]');
-        if (t) t.setAttribute('aria-label', p.cap || 'Photo');
+        if (t) t.setAttribute('aria-label', label(p) || 'Photo');
       })
       .catch(function (e) { $('cap-msg').textContent = e.message; });
   }
 
   // ---- Wiring -----------------------------------------------------------
+  /** A one-line description of a photo, for screen readers and alt text. */
+  function label(p) {
+    var c = p.cap || {};
+    var line = [c.title, c.date, c.location].filter(Boolean).join(' · ');
+    return line || c.description || '';
+  }
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
   }
@@ -348,8 +396,8 @@
     $('cap-cancel').addEventListener('click', closeEditor);
     $('cap-reset').addEventListener('click', function () { saveCaption(true); });
     form.addEventListener('submit', function (e) { e.preventDefault(); saveCaption(false); });
-    $('cap-text').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveCaption(false); }
+    $('cap-x').addEventListener('keydown', function (e) { // Ctrl/Cmd+Enter saves from the description
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveCaption(false); }
     });
   }
 

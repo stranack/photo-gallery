@@ -34,16 +34,20 @@ JPEG, PNG, GIF, WebP, TIFF, BMP and HEIC files are shown. Raw camera files (NEF,
 
 ## Captions
 
-Captions come from the file names made by `prefix_photo_dates.py`:
+Each photo's caption has four parts: a **title**, a **date**, a **location** and a **description**. They show under the photo in the full-screen view: the title first, then the date and location on one line, then the description.
 
-| File name | Caption |
-|---|---|
-| `2018-09-15_San-Francisco_United-States_DSC_0029.JPG` | 15 September 2018 · San Francisco, United States |
-| `2026-11-06_DSC_4403.jpeg` | 6 November 2026 |
-| `1991_14.jpg` | 1991 |
-| `DSC_4399 (1).jpeg` | (no caption) |
+The date and location fill in automatically from file names made by `prefix_photo_dates.py`. The title and description start empty.
 
-To write your own caption, sign in with your admin password, either on the gallery's password page or at `admin.php`. Then open a photo in the gallery and click the pencil. **Save** keeps your words and **Use automatic** goes back to the caption from the file name. Saving an empty caption hides it for that photo. Your captions are saved on the site (in `data/captions.json`) and stay with the photo if you rename or move it within the albums folder.
+| File name | Date | Location |
+|---|---|---|
+| `2018-09-15_San-Francisco_United-States_DSC_0029.JPG` | 15 September 2018 | San Francisco, United States |
+| `2026-11-06_DSC_4403.jpeg` | 6 November 2026 | (empty) |
+| `1991_14.jpg` | 1991 | (empty) |
+| `DSC_4399 (1).jpeg` | (empty) | (empty) |
+
+To edit a caption, sign in with your admin password, either on the gallery's password page or at `admin.php`. Then open a photo and click the pencil. Under the date and location, the editor shows whether the value came from the file name, and offers to put the file name's version back if you've changed it. Dates are plain text, so "Summer 1991" or "about 1975" work too.
+
+**Save** keeps what you've typed; an emptied field stays empty. **Use automatic** clears your changes to that photo and goes back to the file name. If you leave the date or location as the file name gives them, they keep following the file name, so renaming the file updates them. Your captions are saved on the site (in `data/captions.json`) and stay with the photo if you rename or move it within the albums folder.
 
 ## Requirements
 

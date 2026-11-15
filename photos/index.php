@@ -131,13 +131,31 @@ head_html($title, $css); ?>
   </div>
   <button class="lb-nav lb-prev" id="lb-prev" type="button" aria-label="Previous photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4 7 12l8 8" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></button>
   <button class="lb-nav lb-next" id="lb-next" type="button" aria-label="Next photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 4 8 8-8 8" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></button>
-  <p class="lb-cap" id="lb-cap"></p>
+  <div class="lb-cap" id="lb-cap" aria-live="polite">
+    <p class="cap-title" id="cap-title"></p>
+    <p class="cap-meta" id="cap-meta"></p>
+    <p class="cap-desc" id="cap-desc"></p>
+  </div>
   <div class="lb-strip" id="lb-strip" aria-label="All photos in this album"></div>
   <?php if ($owner): ?>
   <form class="cap-edit" id="cap-edit" hidden>
-    <label for="cap-text">Caption</label>
-    <textarea id="cap-text" rows="2" maxlength="500"></textarea>
-    <p class="cap-auto" id="cap-auto"></p>
+    <h2 class="cap-edit-head">Caption</h2>
+    <label for="cap-t">Title</label>
+    <input id="cap-t" maxlength="200" autocomplete="off">
+    <div class="cap-row">
+      <div>
+        <label for="cap-d">Date</label>
+        <input id="cap-d" maxlength="200" autocomplete="off" placeholder="e.g. 6 November 2026">
+        <p class="cap-hint" id="cap-d-hint"></p>
+      </div>
+      <div>
+        <label for="cap-l">Location</label>
+        <input id="cap-l" maxlength="200" autocomplete="off" placeholder="e.g. Regina, Canada">
+        <p class="cap-hint" id="cap-l-hint"></p>
+      </div>
+    </div>
+    <label for="cap-x">Description</label>
+    <textarea id="cap-x" rows="3" maxlength="2000"></textarea>
     <div class="cap-btns">
       <button type="submit" class="btn btn-solid">Save</button>
       <button type="button" class="btn btn-ghost" id="cap-reset">Use automatic</button>

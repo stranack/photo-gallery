@@ -2,8 +2,8 @@
 /*
  * Saves a caption written on the gallery page. Only the owner (signed in to
  * admin.php in this browser) can do this.
- *   POST id, caption       sets your own caption ("" hides the caption)
- *   POST id, reset=1       goes back to the caption made from the file name
+ *   POST id, title, date, location, description   saves the caption details
+ *   POST id, reset=1       goes back to the date and location from the file name
  */
 declare(strict_types=1);
 require __DIR__ . '/app/bootstrap.php';
@@ -31,20 +31,17 @@ $id = (string) ($_POST['id'] ?? '');
 if (!preg_match('/^[0-9a-f]{16}$/', $id)) {
     reply(400, ['error' => 'Unknown photo']);
 }
-$auto = null;
-foreach (load_gallery()['albums'] ?? [] as $a) {
-    foreach ($a['photos'] as $p) {
-        if ($p['id'] === $id) {
-            $auto = $p['auto'];
-        }
-    }
-}
-if ($auto === null) {
+$file = photo_file($id);
+if ($file === null) {
     reply(404, ['error' => 'That photo is no longer in the gallery.']);
 }
 if (!empty($_POST['reset'])) {
-    save_caption($id, null);
-    reply(200, ['caption' => $auto, 'custom' => false]);
+    save_caption($id, null, $file);
+} else {
+    $fields = [];
+    foreach (CAPTION_FIELDS as $f) {
+        $fields[$f] = (string) ($_POST[$f] ?? '');
+    }
+    save_caption($id, $fields, $file);
 }
-save_caption($id, (string) ($_POST['caption'] ?? ''));
-reply(200, ['caption' => load_captions()[$id] ?? '', 'custom' => true]);
+reply(200, ['caption' => caption_fields($id, $file), 'custom' => isset(load_captions()[$id])]);
