@@ -177,7 +177,7 @@ code { font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; bac
 }
 .lb-cap p { margin: 0; }
 .lb-cap p:empty { display: none; }
-.cap-title { font-family: var(--serif); font-size: 1.15rem; letter-spacing: .03em; color: #f3f1ed; }
+.cap-title { font-family: var(--sans); font-size: 1.15rem; letter-spacing: .03em; color: #f3f1ed; }
 .cap-meta { font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; color: rgba(243,241,237,.6); margin-top: .3rem !important; }
 .cap-title:empty + .cap-meta { margin-top: 0 !important; }
 .cap-desc {
