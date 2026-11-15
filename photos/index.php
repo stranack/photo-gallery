@@ -113,6 +113,7 @@ head_html($title, $css); ?>
 
 <footer class="foot">
   <span>&copy; <?= date('Y') ?> <?= h($subtitle !== '' ? $subtitle : $title) ?></span>
+  <a href="admin.php">Admin</a>
   <a href="?signout=1">Sign out</a>
 </footer>
 
