@@ -144,6 +144,7 @@
   function closeViewer() {
     stopShow();
     closeEditor();
+    closeShare();
     lb.open = false;
     lbEl.hidden = true;
     document.body.style.overflow = '';
@@ -255,7 +256,7 @@
     lbEl.classList.remove('idle');
     clearTimeout(lb.idleTimer);
     lb.idleTimer = setTimeout(function () {
-      if (lb.open && lb.timer && !editing()) lbEl.classList.add('idle');
+      if (lb.open && lb.timer && !editing() && !sharing()) lbEl.classList.add('idle');
     }, 2800);
   }
 
@@ -365,6 +366,7 @@
       return;
     }
     if (!lb.open) return;
+    if (sharing()) { if (e.key === 'Escape') closeShare(); return; }
     if (editing()) { if (e.key === 'Escape') closeEditor(); return; }
     wake();
     if (e.key === 'ArrowRight') go(1);
@@ -401,10 +403,96 @@
     });
   }
 
+
+  // ---- Share panel ------------------------------------------------------
+  var shareEl = $('share');
+  function sharing() { return shareEl && !shareEl.hidden; }
+  function shareUrl(t) { return new URL('share.php?s=' + t, location.href).href; }
+  function openShare() {
+    stopShow();
+    closeEditor();
+    var p = lb.list[lb.i], c = p.cap || {};
+    $('sh-img').src = p.g;
+    $('sh-img').alt = label(p);
+    $('sh-title').textContent = c.title || c.location || '';
+    $('sh-date').textContent = c.date || '';
+    $('sh-dl').href = p.l + '&dl=1';
+    $('sh-copy-label').textContent = 'Copy link';
+    $('sh-msg').textContent = '';
+    $('sh-more').hidden = !navigator.share;
+    syncShareOwner(p);
+    shareEl.hidden = false;
+    lbEl.classList.remove('idle');
+    $('sh-close').focus();
+  }
+  function closeShare() { if (shareEl) shareEl.hidden = true; }
+  function syncShareOwner(p) {
+    var o = $('sh-owner');
+    if (o) o.hidden = !p.sh;
+  }
+  // The photo's public link, made the first time someone shares it.
+  function ensureLink(p) {
+    if (p.sh) return Promise.resolve(shareUrl(p.sh));
+    var body = new URLSearchParams({ action: 'create', id: p.id });
+    return fetch('share.php', { method: 'POST', body: body, headers: { 'X-CSRF': G.shareCsrf }, credentials: 'same-origin' })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not make a link'); return j; }); })
+      .then(function (j) { p.sh = j.token; syncShareOwner(p); return shareUrl(j.token); });
+  }
+  function shareText(p) {
+    var c = p.cap || {};
+    return c.title || [c.date, c.location].filter(Boolean).join(' · ') || document.title;
+  }
+  // Pop-up blockers only allow windows opened straight from a click, so open
+  // it first and point it at the share page once the link exists.
+  function shareTo(makeUrl) {
+    var p = lb.list[lb.i];
+    var w = window.open('', '_blank');
+    ensureLink(p).then(function (url) {
+      var target = makeUrl(url, shareText(p));
+      if (w) { w.opener = null; w.location.href = target; } else location.href = target;
+    }).catch(function (e) { if (w) w.close(); $('sh-msg').textContent = e.message; });
+  }
+  if (shareEl) {
+    $('lb-share').addEventListener('click', openShare);
+    $('sh-close').addEventListener('click', closeShare);
+    shareEl.addEventListener('click', function (e) { if (e.target === shareEl) closeShare(); });
+    $('sh-copy').addEventListener('click', function () {
+      var p = lb.list[lb.i];
+      ensureLink(p).then(function (url) {
+        var done = function () { $('sh-copy-label').textContent = 'Copied'; $('sh-msg').textContent = ''; };
+        if (navigator.clipboard && window.isSecureContext) {
+          return navigator.clipboard.writeText(url).then(done, function () { window.prompt('Copy this link:', url); });
+        }
+        window.prompt('Copy this link:', url);
+      }).catch(function (e) { $('sh-msg').textContent = e.message; });
+    });
+    $('sh-fb').addEventListener('click', function () {
+      shareTo(function (url) { return 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url); });
+    });
+    $('sh-x').addEventListener('click', function () {
+      shareTo(function (url, text) { return 'https://x.com/intent/post?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text); });
+    });
+    $('sh-more').addEventListener('click', function () {
+      var p = lb.list[lb.i];
+      ensureLink(p).then(function (url) {
+        return navigator.share({ title: shareText(p), url: url });
+      }).catch(function (e) { if (e && e.name !== 'AbortError') $('sh-msg').textContent = e.message; });
+    });
+    var stop = $('sh-stop');
+    if (stop) stop.addEventListener('click', function () {
+      var p = lb.list[lb.i];
+      var body = new URLSearchParams({ action: 'remove', id: p.id });
+      fetch('share.php', { method: 'POST', body: body, headers: { 'X-CSRF': G.shareCsrf }, credentials: 'same-origin' })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not stop sharing'); return j; }); })
+        .then(function () { p.sh = null; syncShareOwner(p); $('sh-copy-label').textContent = 'Copy link'; $('sh-msg').textContent = 'Stopped. The old link no longer works.'; })
+        .catch(function (e) { $('sh-msg').textContent = e.message; });
+    });
+  }
+
   // Swipe between photos on touch screens.
   var sx = null, sy = null;
   lbEl.addEventListener('touchstart', function (e) {
-    if (editing()) return;
+    if (editing() || sharing()) { sx = null; return; }
     sx = e.touches[0].clientX; sy = e.touches[0].clientY; wake();
   }, { passive: true });
   lbEl.addEventListener('touchend', function (e) {

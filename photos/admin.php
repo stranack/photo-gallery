@@ -57,6 +57,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     $notice = 'Dropbox connected' . $who . '. Run a sync to load your albums.';
                     break;
+                case 'unshare':
+                    share_remove((string) ($_POST['id'] ?? ''));
+                    $notice = 'That photo is no longer shared. Its old link now shows a "not shared" page.';
+                    break;
                 case 'disconnect':
                     save_dropbox_refresh_token(null);
                     $notice = 'Dropbox disconnected. Photos already on the site stay until the next sync.';
@@ -134,6 +138,7 @@ $signedIn = !empty($_SESSION['admin']) && is_owner();
       <div><dt>Albums</dt><dd><?php if ($gallery['albums']): ?><?= h(implode(', ', array_map(fn($a) => $a['name'] . ' (' . count($a['photos']) . ')', $gallery['albums']))) ?><?php else: ?>None yet<?php endif; ?></dd></div>
       <div><dt>Photos on site</dt><dd><?= number_format($ok) ?><?php if (isset($state['complete']) && !$state['complete']): ?> (more still to fetch)<?php endif; ?><?php if ($failedList): ?>, <?= count($failedList) ?> Dropbox couldn't preview<?php endif; ?></dd></div>
       <div><dt>Your captions</dt><dd><?= count($captions) ?> written by you; the rest come from file names</dd></div>
+      <div><dt>Shared photos</dt><dd><?= count(load_shares()) ?> with a public page<?= load_shares() ? ' (listed below)' : '' ?></dd></div>
       <div><dt>Gallery password</dt><dd><?= gallery_password_usable() ? 'Set' : '<span class="err">Not set: visitors can\'t get in until you set <code>gallery_password</code> in config.php</span>' ?></dd></div>
       <div><dt>Last checked</dt><dd><?= !empty($state['last_sync']) ? h(date('M j, Y g:i a', (int) $state['last_sync'])) : 'Never' ?></dd></div>
       <?php if (!empty($state['last_error'])): ?><div><dt>Last error</dt><dd class="err"><?= h($state['last_error']['message']) ?></dd></div><?php endif; ?>
@@ -190,6 +195,27 @@ $signedIn = !empty($_SESSION['admin']) && is_owner();
     <?php if ($failedList): ?>
       <p class="hint">Dropbox couldn't make a preview of: <?= h(implode(', ', array_map(fn($m) => $m['path'], array_slice($failedList, 0, 10)))) ?><?= count($failedList) > 10 ? '…' : '' ?>. Raw camera files and some HEIC files can't be previewed; export a JPEG instead.</p>
     <?php endif; ?>
+  </div>
+  <?php endif; ?>
+
+
+  <?php $shares = load_shares(); if ($shares): ?>
+  <div class="panel">
+    <h2>Shared photos</h2>
+    <p class="hint">Each of these has a public page that anyone with its link can see. Stopping a share turns its link off for good; sharing the photo again makes a new link.</p>
+    <ul class="share-list">
+    <?php foreach ($shares as $sid => $sh): $sp = find_photo((string) $sid); ?>
+      <li>
+        <?php if ($sp): $sc = caption_fields((string) $sid, $sp['file'], $captions); ?>
+          <a href="share.php?s=<?= h($sh['t']) ?>" target="_blank" rel="noopener"><img src="img.php?id=<?= h($sid) ?>&amp;s=g&amp;v=<?= h($sp['v']) ?>" alt="" loading="lazy"></a>
+          <span><strong><?= h($sc['title'] !== '' ? $sc['title'] : $sp['file']) ?></strong><br><span class="hint"><?= h($sp['album']) ?> · shared <?= h(date('M j, Y', (int) $sh['at'])) ?></span></span>
+        <?php else: ?>
+          <span><strong>A photo no longer in the gallery</strong></span>
+        <?php endif; ?>
+        <form method="post"><input type="hidden" name="csrf" value="<?= $csrf ?>"><input type="hidden" name="action" value="unshare"><input type="hidden" name="id" value="<?= h($sid) ?>"><button class="btn btn-quiet">Stop sharing</button></form>
+      </li>
+    <?php endforeach; ?>
+    </ul>
   </div>
   <?php endif; ?>
 

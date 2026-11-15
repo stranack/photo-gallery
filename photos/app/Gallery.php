@@ -195,6 +195,7 @@ function gallery_for_page(bool $owner): array
 {
     $g = load_gallery();
     $captions = load_captions();
+    $shares = load_shares();
     $albums = [];
     foreach ($g['albums'] ?? [] as $a) {
         $photos = [];
@@ -206,6 +207,7 @@ function gallery_for_page(bool $owner): array
                 'g'   => 'img.php?id=' . $p['id'] . '&s=g&v=' . $p['v'],
                 'l'   => 'img.php?id=' . $p['id'] . '&s=l&v=' . $p['v'],
                 'cap' => caption_fields($p['id'], $p['file'], $captions),
+                'sh'  => $shares[$p['id']]['t'] ?? null,
             ];
             if ($owner) {
                 $row['auto'] = auto_fields($p['file']);
@@ -221,4 +223,101 @@ function gallery_for_page(bool $owner): array
         $cover = 'img.php?id=' . $g['cover']['id'] . '&s=l&v=' . $g['cover']['v'];
     }
     return ['albums' => $albums, 'cover' => $cover, 'built' => $g['built_at'] ?? null];
+}
+
+// ---- Public share links ---------------------------------------------------
+// A shared photo gets an unguessable token; share.php?s=TOKEN shows that one
+// photo to anyone, while the rest of the gallery stays behind the password.
+
+/** @return array<string, array{t:string,at:int}> photo id => share */
+function load_shares(): array
+{
+    return read_json(SHARES_FILE, []);
+}
+
+function with_shares(callable $change): array
+{
+    ensure_data_dir();
+    $fh = fopen(SHARES_FILE . '.lock', 'c');
+    if ($fh) {
+        flock($fh, LOCK_EX);
+    }
+    $all = load_shares();
+    $all = $change($all);
+    write_json(SHARES_FILE, $all);
+    if ($fh) {
+        flock($fh, LOCK_UN);
+        fclose($fh);
+    }
+    return $all;
+}
+
+/** The photo's share token, made on first use. */
+function share_create(string $id): string
+{
+    $all = with_shares(function (array $all) use ($id) {
+        if (empty($all[$id]['t'])) {
+            $all[$id] = ['t' => bin2hex(random_bytes(12)), 'at' => time()];
+        }
+        return $all;
+    });
+    return $all[$id]['t'];
+}
+
+function share_remove(string $id): void
+{
+    with_shares(function (array $all) use ($id) {
+        unset($all[$id]);
+        return $all;
+    });
+}
+
+/** Photo id for a share token, or null if it isn't (or is no longer) shared. */
+function share_photo(string $token): ?string
+{
+    if (!preg_match('/^[0-9a-f]{24}$/', $token)) {
+        return null;
+    }
+    foreach (load_shares() as $id => $s) {
+        if (hash_equals($s['t'], $token)) {
+            return (string) $id;
+        }
+    }
+    return null;
+}
+
+/** A photo's row in the gallery index (with its version), or null. */
+function find_photo(string $id): ?array
+{
+    foreach (load_gallery()['albums'] ?? [] as $a) {
+        foreach ($a['photos'] as $p) {
+            if ($p['id'] === $id) {
+                return $p + ['album' => $a['name']];
+            }
+        }
+    }
+    return null;
+}
+
+/** Token the share panel sends back, so another site can't create links. */
+function share_csrf(): string
+{
+    return hash_hmac('sha256', 'share-csrf', is_owner() ? owner_token() : visitor_token());
+}
+
+/** A file name for downloads: the title if there is one, else the original name. */
+function download_name(string $id, string $file): string
+{
+    $title = caption_fields($id, $file)['title'];
+    $base = $title !== '' ? $title : pathinfo($file, PATHINFO_FILENAME);
+    $base = trim((string) preg_replace('/[^\p{L}\p{N} ._()\-]+/u', '', $base));
+    return ($base !== '' ? mb_substr($base, 0, 120) : 'photo') . '.jpg';
+}
+
+function site_base_url(): string
+{
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    $dir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
+    return ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . $dir . '/';
 }

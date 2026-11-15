@@ -78,6 +78,7 @@ if (!$allowed):
 $data = gallery_for_page($owner);
 $data['owner'] = $owner;
 $data['csrf'] = $owner ? owner_csrf() : null;
+$data['shareCsrf'] = share_csrf();
 $data['slideshowSeconds'] = max(2, (int) cfg('slideshow_seconds', 5));
 $photoCount = array_sum(array_map(fn($a) => count($a['photos']), $data['albums']));
 head_html($title, $css); ?>
@@ -125,6 +126,7 @@ head_html($title, $css); ?>
     <span class="lb-count" id="lb-count"></span>
     <div class="lb-actions">
       <button class="icon-btn" id="lb-fav" type="button" aria-label="Favourite" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.6 13a4.7 4.7 0 0 1 6.6-6.7l.8.8.8-.8a4.7 4.7 0 0 1 6.6 6.7z"/></svg></button>
+      <button class="icon-btn" id="lb-share" type="button" aria-label="Share or download"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="m8.2 10.8 7.6-4.1M8.2 13.2l7.6 4.1"/></svg></button>
       <button class="icon-btn" id="lb-play" type="button" aria-label="Play slideshow"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-play" d="M8 5.5v13l10.5-6.5z"/><path class="i-pause" d="M7 5h3.5v14H7zm6.5 0H17v14h-3.5z"/></svg></button>
       <?php if ($owner): ?><button class="icon-btn" id="lb-edit" type="button" aria-label="Edit caption"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 1-4.5L15.8 4.7a1.8 1.8 0 0 1 2.5 0l1 1a1.8 1.8 0 0 1 0 2.5L8.5 19z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button><?php endif; ?>
       <button class="icon-btn" id="lb-close" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6" fill="none"/></svg></button>
@@ -138,6 +140,31 @@ head_html($title, $css); ?>
     <p class="cap-desc" id="cap-desc"></p>
   </div>
   <div class="lb-strip" id="lb-strip" aria-label="All photos in this album"></div>
+
+  <div class="share" id="share" hidden role="dialog" aria-modal="true" aria-labelledby="sh-title">
+    <div class="share-card">
+      <img id="sh-img" alt="">
+      <div class="share-info">
+        <p class="share-title" id="sh-title"></p>
+        <div class="share-by">
+          <span><?= h($subtitle !== '' ? $subtitle : $title) ?></span>
+          <span id="sh-date"></span>
+        </div>
+      </div>
+    </div>
+    <p class="share-head">Save and share</p>
+    <div class="share-btns">
+      <a class="share-btn" id="sh-dl" href="#" download><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg></span>Download</a>
+      <button class="share-btn" id="sh-copy" type="button"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></span><em id="sh-copy-label">Copy link</em></button>
+      <button class="share-btn" id="sh-fb" type="button"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M13.5 21v-7.5H16l.4-3h-2.9V8.7c0-.9.3-1.5 1.5-1.5h1.5V4.5c-.3 0-1.2-.1-2.2-.1-2.2 0-3.7 1.3-3.7 3.8v2.3H8.1v3h2.5V21z"/></svg></span>Facebook</button>
+      <button class="share-btn" id="sh-x" type="button"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M17.3 4h2.9l-6.3 7.2L21.3 20h-5.8l-4.5-5.9L5.8 20H2.9l6.7-7.7L2.5 4h5.9l4.1 5.4zm-1 14.3h1.6L7.6 5.6H5.9z"/></svg></span>X</button>
+      <button class="share-btn" id="sh-more" type="button" hidden><span><svg viewBox="0 0 24 24" aria-hidden="true"><circle class="fill" cx="5.5" cy="12" r="1.6"/><circle class="fill" cx="12" cy="12" r="1.6"/><circle class="fill" cx="18.5" cy="12" r="1.6"/></svg></span>More</button>
+    </div>
+    <p class="share-note" id="sh-note">Copy link, Facebook and X give this one photo its own public page. The rest of the gallery stays private.</p>
+    <?php if ($owner): ?><p class="share-owner" id="sh-owner" hidden>This photo has a public page. <button type="button" id="sh-stop">Stop sharing</button></p><?php endif; ?>
+    <p class="share-msg" id="sh-msg" role="status"></p>
+    <button class="icon-btn share-close" id="sh-close" type="button" aria-label="Close sharing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
   <?php if ($owner): ?>
   <form class="cap-edit" id="cap-edit" hidden>
     <h2 class="cap-edit-head">Caption</h2>

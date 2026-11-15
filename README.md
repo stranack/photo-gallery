@@ -49,6 +49,16 @@ To edit a caption, sign in with your admin password, either on the gallery's pas
 
 **Save** keeps what you've typed; an emptied field stays empty. **Use automatic** clears your changes to that photo and goes back to the file name. If you leave the date or location as the file name gives them, they keep following the file name, so renaming the file updates them. Your captions are saved on the site (in `data/captions.json`) and stay with the photo if you rename or move it within the albums folder.
 
+## Sharing and downloads
+
+The share button in the full-screen view opens a panel with a preview card (photo, title, your name, date) and these options:
+
+- **Download**: saves the web-size copy (up to 2048 pixels), named after the photo's title. Your originals stay in Dropbox.
+- **Copy link**, **Facebook** and **X**: give that one photo its own public page, `share.php?s=…`, with a preview Facebook and X can show. Anyone with the link sees just that photo and its caption; the rest of the gallery stays behind the password.
+- **More** (phones and tablets): the device's own share menu, with the same public link.
+
+Anyone signed in to the gallery can share a photo. To turn a share off, open the photo's share panel while signed in as the owner and choose **Stop sharing**, or use the **Shared photos** list on the admin page. The old link then shows a "not shared any more" page; sharing the photo again makes a new link.
+
 ## Requirements
 
 - PHP 8.0 or newer with the `curl` and `json` extensions, standard on shared hosts
@@ -60,7 +70,8 @@ To edit a caption, sign in with your admin password, either on the gallery's pas
 ```
 photos/              upload this folder to your web space
   index.php          password page and gallery
-  img.php            hands photos only to visitors with the password
+  img.php            hands photos only to visitors with the password (or a share link)
+  share.php          public page for a shared photo; creates and removes share links
   caption.php        saves captions you write (owner only)
   admin.php          connect Dropbox, run a sync, check status
   cron.php           optional web-triggered sync
