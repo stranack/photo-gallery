@@ -181,7 +181,8 @@ code { font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; bac
 .cap-meta { font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; color: rgba(243,241,237,.6); margin-top: .3rem !important; }
 .cap-title:empty + .cap-meta { margin-top: 0 !important; }
 .cap-desc {
-  font-family: var(--serif); font-size: .95rem; line-height: 1.45; margin-top: .45rem !important; white-space: pre-line;
+  font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; color: rgba(243,241,237,.6);
+  line-height: 1.75; margin-top: .45rem !important; white-space: pre-line;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .lb-strip {
@@ -234,7 +235,7 @@ code { font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; bac
   .lb-nav { display: none; }
   .lb-cap { bottom: 76px; padding: 8px 1rem 4px; }
   .cap-title { font-size: 1.02rem; }
-  .cap-desc { font-size: .88rem; -webkit-line-clamp: 2; }
+  .cap-desc { -webkit-line-clamp: 2; }
   .cap-row { grid-template-columns: 1fr; }
   .lb-strip { height: 76px; padding: 8px 10px 14px; gap: 4px; }
   .lb-strip button { height: 54px; }
