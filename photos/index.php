@@ -100,7 +100,7 @@ head_html($title, $css); ?>
     <button class="icon-btn" id="play" type="button" title="Slideshow" aria-label="Play slideshow">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg><span>Slideshow</span>
     </button>
-    <?php if ($owner): ?><a class="icon-btn" href="admin.php" title="Admin" aria-label="Admin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.4 4.6.1-1.1-.1-1.1 2-1.6-2-3.4-2.4 1a8 8 0 0 0-1.9-1.1L15.8 3h-3.9l-.4 2.6a8 8 0 0 0-1.9 1.1l-2.4-1-2 3.4 2 1.6-.1 1.1.1 1.1-2 1.6 2 3.4 2.4-1c.6.5 1.2.8 1.9 1.1l.4 2.6h3.9l.4-2.6c.7-.3 1.3-.6 1.9-1.1l2.4 1 2-3.4z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></a><?php endif; ?>
+    <?php if ($owner): ?><a class="icon-btn" href="admin.php" title="Admin" aria-label="Admin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.07 5.27L10.56 2.91L13.44 2.91L13.93 5.27L15.39 5.88L17.41 4.56L19.44 6.59L18.12 8.61L18.73 10.07L21.09 10.56L21.09 13.44L18.73 13.93L18.12 15.39L19.44 17.41L17.41 19.44L15.39 18.12L13.93 18.73L13.44 21.09L10.56 21.09L10.07 18.73L8.61 18.12L6.59 19.44L4.56 17.41L5.88 15.39L5.27 13.93L2.91 13.44L2.91 10.56L5.27 10.07L5.88 8.61L4.56 6.59L6.59 4.56L8.61 5.88Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></a><?php endif; ?>
   </div>
 </nav>
 
