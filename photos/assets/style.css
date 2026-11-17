@@ -79,8 +79,8 @@ code { font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; bac
 
 /* ---- Album bar ---- */
 .bar {
-  position: sticky; top: 0; z-index: 20; height: var(--bar-h);
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1rem;
+  position: sticky; top: 0; z-index: 20; min-height: var(--bar-h);
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 1rem;
   padding: 0 clamp(1rem, 3vw, 2.2rem);
   background: rgba(251,250,248,.94); backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px);
   border-bottom: 1px solid var(--line);
@@ -89,16 +89,18 @@ code { font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; bac
   font-family: var(--serif); text-transform: uppercase; letter-spacing: .14em; font-size: .95rem;
   text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.tabs { display: flex; gap: clamp(1rem, 2.6vw, 2.2rem); overflow-x: auto; scrollbar-width: none; height: 100%; }
-.tabs::-webkit-scrollbar { display: none; }
+.tabs {
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+  column-gap: clamp(1rem, 2.6vw, 2.2rem); row-gap: 0; padding: .35rem 0;
+}
 .tab {
-  position: relative; display: flex; align-items: center; gap: .4em; height: 100%;
+  position: relative; display: flex; align-items: center; gap: .4em; min-height: 2.6rem;
   border: 0; background: none; padding: 0; cursor: pointer; white-space: nowrap;
   font-size: .72rem; letter-spacing: .22em; text-transform: uppercase; color: var(--muted);
   transition: color .2s;
 }
 .tab:hover, .tab[aria-selected="true"] { color: var(--ink); }
-.tab[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--ink); }
+.tab[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: .3rem; height: 2px; background: var(--ink); }
 .tab svg { width: 13px; height: 13px; fill: currentColor; }
 .tab .n { font-size: .66rem; letter-spacing: .1em; opacity: .7; }
 .bar-tools { display: flex; justify-content: flex-end; gap: .25rem; }
@@ -223,11 +225,18 @@ code { font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; bac
 .cap-edit .btn-ghost:hover { background: rgba(0,0,0,.05); }
 .cap-msg { font-size: .82rem; color: #9b2c1f; margin: .5rem 0 0; min-height: 1em; }
 
+/* Narrower screens: title and tools on one line, every album tab on the rows below */
+@media (max-width: 1280px) {
+  .bar { grid-template-columns: minmax(0, 1fr) auto; row-gap: 0; padding-top: .3rem; }
+  .tabs { grid-column: 1 / -1; grid-row: 2; padding: 0 0 .35rem; }
+}
+
 @media (max-width: 760px) {
   :root { --gap: 4px; --bar-h: 52px; }
-  .bar { grid-template-columns: 1fr auto; }
-  .bar-title { display: none; }
-  .tabs { justify-content: flex-start; }
+  .bar-title { font-size: .85rem; }
+  .tabs { column-gap: .9rem; justify-content: flex-start; padding: 0 0 .25rem; }
+  .tab { font-size: .66rem; letter-spacing: .1em; min-height: 1.9rem; }
+  .tab[aria-selected="true"]::after { bottom: .15rem; }
   .icon-btn span, .tab[data-view="favourites"] span:not(.n) { display: none; }
   .tab svg { width: 15px; height: 15px; }
   .lb-stage { inset: 56px 0 122px; }
