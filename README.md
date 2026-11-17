@@ -2,7 +2,7 @@
 
 A small PHP site that publishes albums of photographs from Dropbox as a private, password-protected gallery. It runs on ordinary shared hosting (I use Bluehost), and the look follows client-gallery services such as ShootProof: a full-screen cover photo, album tabs, a justified photo grid, a full-screen viewer and a slideshow.
 
-Once an hour the site checks the albums folder in Dropbox. It fetches web-sized copies of new or changed photos, removes copies of photos you've deleted and updates the albums. Its Dropbox access is read-only, and your original files never leave Dropbox.
+Once an hour the site checks the albums folder in Dropbox. It fetches web-sized copies of new or changed photos, removes copies of photos you've deleted and updates the albums. Your original files never leave Dropbox. The site changes nothing in Dropbox except when you, signed in as the owner, move a photo to the Trash.
 
 ## Features
 
@@ -13,6 +13,7 @@ Once an hour the site checks the albums folder in Dropbox. It fetches web-sized 
 - A slideshow with cross-fades that goes full screen
 - Favourites: visitors tap the heart on any photo, and the Favourites tab collects them. They're saved in the visitor's own browser.
 - Captions made from your file names, which you can replace with your own words
+- A trash button for the owner that takes a photo off the gallery and moves the original into a Trash folder in Dropbox
 - Works on phones, and stays out of search engines
 
 ## How albums work
@@ -59,6 +60,22 @@ The share button in the full-screen view opens a panel with a preview card (phot
 
 Anyone signed in to the gallery can share a photo. To turn a share off, open the photo's share panel while signed in as the owner and choose **Stop sharing**, or use the **Shared photos** list on the admin page. The old link then shows a "not shared any more" page; sharing the photo again makes a new link.
 
+## Removing photos
+
+Signed in as the owner, open a photo and click the trash can (or press Delete). After you confirm, the site:
+
+- moves the original out of its album into the Trash folder in Dropbox, keeping the album folder's name: `Photographs/Albums/Album 1 Vehicles/x.jpg` goes to `Photographs/Trash/Album 1 Vehicles/x.jpg`. If a file of that name is already there, Dropbox adds a number.
+- takes the photo off the gallery at once, deletes the site's copies of it and turns off its public link if it had one.
+
+Nothing is deleted from Dropbox, so the Trash folder is where to look if you change your mind: move the file back into its album folder and the next sync puts it back, with its caption. Empty the Trash folder in Dropbox whenever you like. To use a different folder, set `dropbox_trash_path` in `config.php`; keep it outside the albums folder.
+
+This needs the Dropbox app's **files.content.write** permission (step 1 of Setup). If you set the gallery up before the trash button existed:
+
+1. At <https://www.dropbox.com/developers/apps>, open the app, tick **files.content.write** on the **Permissions** tab and click **Submit**.
+2. On the admin page, click **Disconnect**, then connect Dropbox again with a new code. A connection made before the change keeps its old, read-only permissions.
+
+If you share the Dropbox app with Kevin's Library, the library's connection gets the new permission only when you reconnect it there too; it doesn't need it.
+
 ## Requirements
 
 - PHP 8.0 or newer with the `curl` and `json` extensions, standard on shared hosts
@@ -73,6 +90,7 @@ photos/              upload this folder to your web space
   img.php            hands photos only to visitors with the password (or a share link)
   share.php          public page for a shared photo; creates and removes share links
   caption.php        saves captions you write (owner only)
+  delete.php         moves a photo to the Trash folder (owner only)
   admin.php          connect Dropbox, run a sync, check status
   cron.php           optional web-triggered sync
   app/               code and settings (blocked from the web)
@@ -83,14 +101,14 @@ photos/              upload this folder to your web space
 
 ## Setup
 
-The steps below use cPanel. Setup takes about 20 minutes. If you set up Kevin's Library, you can reuse the same Dropbox app: it already has the permissions this site needs, so skip step 1 and use its key and secret.
+The steps below use cPanel. Setup takes about 20 minutes. If you set up Kevin's Library, you can reuse the same Dropbox app: add the **files.content.write** permission (step 1, item 4), skip the rest of step 1 and use its key and secret.
 
 ### 1. Create a Dropbox app
 
 1. Go to <https://www.dropbox.com/developers/apps> and click **Create app**.
 2. Choose **Scoped access**, then **Full Dropbox**.
 3. Give it a name. It has to be unique across Dropbox, and only you will see it.
-4. On the **Permissions** tab, tick **files.metadata.read** and **files.content.read**, then click **Submit**.
+4. On the **Permissions** tab, tick **files.metadata.read**, **files.content.read** and **files.content.write**, then click **Submit**. The site uses the write permission only for the owner's trash button.
 5. On the **Settings** tab, note the **App key** and **App secret**.
 
 ### 2. Upload the files
@@ -156,5 +174,7 @@ Set `local_albums_path` in `config.php` to a folder of albums on your own comput
 **"Dropbox rejected the code."** Codes expire after a few minutes and work only once. Open the permission page again.
 
 **"path/not_found".** `dropbox_albums_path` doesn't match where the albums are in Dropbox. Leave out your computer's own folders.
+
+**"The Dropbox connection is read-only."** The trash button needs the **files.content.write** permission. See [Removing photos](#removing-photos).
 
 **A photo is missing.** Check the admin page: it lists any photos Dropbox couldn't preview. Raw files and some HEIC files need exporting as JPEG.

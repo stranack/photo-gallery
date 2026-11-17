@@ -144,7 +144,7 @@ $signedIn = !empty($_SESSION['admin']) && is_owner();
       <?php if (!empty($state['last_error'])): ?><div><dt>Last error</dt><dd class="err"><?= h($state['last_error']['message']) ?></dd></div><?php endif; ?>
       <div><dt>PHP</dt><dd><?= h(PHP_VERSION) ?><?= $missing ? ', missing: ' . h(implode(', ', $missing)) : ', all needed extensions present' ?></dd></div>
     </dl>
-    <p class="hint">You're signed in on this browser, so the gallery shows a pencil in the full-screen view for editing captions.</p>
+    <p class="hint">You're signed in on this browser, so the full-screen view shows a pencil for editing captions and a trash can for moving a photo to the Trash folder.</p>
   </div>
 
   <?php if (!$usingLocal): ?>
@@ -166,7 +166,7 @@ $signedIn = !empty($_SESSION['admin']) && is_owner();
         <button type="submit" class="btn">Connect Dropbox</button>
       </form>
     <?php else: ?>
-      <p>Connected. The site reads <code><?= h(cfg('dropbox_albums_path')) ?></code> with read-only access.</p>
+      <p>Connected. The site reads <code><?= h(cfg('dropbox_albums_path')) ?></code>. The trash button in the full-screen view moves photos to <code><?= h(trash_path()) ?></code>.</p>
       <div class="btn-row">
         <form method="post"><input type="hidden" name="csrf" value="<?= $csrf ?>"><input type="hidden" name="action" value="test"><button class="btn btn-quiet">Test connection</button></form>
         <form method="post"><input type="hidden" name="csrf" value="<?= $csrf ?>"><input type="hidden" name="action" value="disconnect"><button class="btn btn-quiet">Disconnect</button></form>

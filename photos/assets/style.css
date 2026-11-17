@@ -224,6 +224,17 @@ code { font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; bac
 .cap-edit .btn { padding: .7em 1.3em; }
 .cap-edit .btn-ghost:hover { background: rgba(0,0,0,.05); }
 .cap-msg { font-size: .82rem; color: #9b2c1f; margin: .5rem 0 0; min-height: 1em; }
+.del-confirm { display: grid; grid-template-columns: 8rem 1fr; gap: 1.1rem; align-items: start; }
+.del-confirm[hidden] { display: none; }
+.del-confirm img { width: 8rem; height: 8rem; object-fit: cover; display: block; background: #e8e5df; }
+.del-text { margin: 0; font-size: .92rem; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
+.del-text strong { color: var(--ink); font-weight: 500; }
+.btn-danger, .btn-danger:hover { background: #9b2c1f; border-color: #9b2c1f; color: #fff; }
+.btn-danger:disabled { opacity: .6; cursor: progress; }
+@media (max-width: 520px) {
+  .del-confirm { grid-template-columns: 1fr; }
+  .del-confirm img { width: 100%; height: 10rem; }
+}
 
 /* Narrower screens: title and tools on one line, every album tab on the rows below */
 @media (max-width: 1280px) {

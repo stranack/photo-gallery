@@ -34,6 +34,13 @@ return [
     // (not in an album) is used as the cover photo.
     'dropbox_albums_path' => '/Photographs/Albums',
 
+    // Where the trash button in the full-screen view moves a photo, inside
+    // Dropbox. It keeps its album folder name, e.g.
+    // /Photographs/Trash/Album 1 Vehicles/2026-11-06_DSC_4403.jpeg. Keep it
+    // outside the albums folder. Leave empty for a Trash folder next to the
+    // albums folder (/Photographs/Trash).
+    'dropbox_trash_path' => '',
+
     // Optional: the file name of the cover photo, if you'd rather pick one from
     // inside an album, e.g. '2026-11-06_DSC_4403.jpeg'. Leave empty to use an
     // image in the albums folder itself, or else the first photo of the first album.

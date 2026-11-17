@@ -128,7 +128,8 @@ head_html($title, $css); ?>
       <button class="icon-btn" id="lb-fav" type="button" aria-label="Favourite" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.6 13a4.7 4.7 0 0 1 6.6-6.7l.8.8.8-.8a4.7 4.7 0 0 1 6.6 6.7z"/></svg></button>
       <button class="icon-btn" id="lb-share" type="button" aria-label="Share or download"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="m8.2 10.8 7.6-4.1M8.2 13.2l7.6 4.1"/></svg></button>
       <button class="icon-btn" id="lb-play" type="button" aria-label="Play slideshow"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-play" d="M8 5.5v13l10.5-6.5z"/><path class="i-pause" d="M7 5h3.5v14H7zm6.5 0H17v14h-3.5z"/></svg></button>
-      <?php if ($owner): ?><button class="icon-btn" id="lb-edit" type="button" aria-label="Edit caption"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 1-4.5L15.8 4.7a1.8 1.8 0 0 1 2.5 0l1 1a1.8 1.8 0 0 1 0 2.5L8.5 19z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button><?php endif; ?>
+      <?php if ($owner): ?><button class="icon-btn" id="lb-edit" type="button" aria-label="Edit caption"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 1-4.5L15.8 4.7a1.8 1.8 0 0 1 2.5 0l1 1a1.8 1.8 0 0 1 0 2.5L8.5 19z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
+      <button class="icon-btn" id="lb-del" type="button" aria-label="Move to Trash" title="Move to Trash"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 6.5h15M9.5 6.5V4.8c0-.4.4-.8.8-.8h3.4c.4 0 .8.4.8.8v1.7M6.5 6.5l.9 12.6c.1.8.7 1.4 1.5 1.4h6.2c.8 0 1.4-.6 1.5-1.4l.9-12.6M10 10.5v6M14 10.5v6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><?php endif; ?>
       <button class="icon-btn" id="lb-close" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6" fill="none"/></svg></button>
     </div>
   </div>
@@ -166,6 +167,18 @@ head_html($title, $css); ?>
     <button class="icon-btn share-close" id="sh-close" type="button" aria-label="Close sharing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   </div>
   <?php if ($owner): ?>
+  <div class="cap-edit del-confirm" id="del-confirm" hidden role="alertdialog" aria-modal="true" aria-labelledby="del-head" aria-describedby="del-text">
+    <img id="del-img" alt="">
+    <div>
+      <h2 class="cap-edit-head" id="del-head">Move this photo to the Trash?</h2>
+      <p class="del-text" id="del-text">It comes off the gallery, and the original moves from its album in Dropbox to <strong><?= h(trash_path()) ?></strong>. To bring it back, move it back into its album folder in Dropbox.</p>
+      <div class="cap-btns">
+        <button type="button" class="btn btn-solid btn-danger" id="del-yes">Move to Trash</button>
+        <button type="button" class="btn btn-ghost" id="del-no">Cancel</button>
+      </div>
+      <p class="cap-msg" id="del-msg" role="status"></p>
+    </div>
+  </div>
   <form class="cap-edit" id="cap-edit" hidden>
     <h2 class="cap-edit-head">Caption</h2>
     <label for="cap-t">Title</label>

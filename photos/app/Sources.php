@@ -30,6 +30,15 @@ interface AlbumSource
     /** How many images fetchImages() should be given at a time. */
     public function batchSize(): int;
 
+    /**
+     * Move one image out of the albums folder into the Trash folder, keeping
+     * its album folder name. A name already taken there gets a number added.
+     * @param string $key  the key listImages() gave it
+     * @param string $path its path relative to the albums folder
+     * @return string where it went
+     */
+    public function trashImage(string $key, string $path): string;
+
     public function describe(): string;
 }
 
@@ -78,6 +87,24 @@ final class LocalSource implements AlbumSource
             $out[] = ['key' => 'local:' . $rel, 'path' => $rel, 'version' => $f->getMTime() . '-' . $f->getSize()];
         }
         return $out;
+    }
+
+    public function trashImage(string $key, string $path): string
+    {
+        $from = $this->root . '/' . $path;
+        if ($path === '' || str_contains('/' . $path . '/', '/../') || !is_file($from)) {
+            throw new RuntimeException('That photo is no longer in the albums folder.');
+        }
+        $trash = trash_path();
+        $dir = $trash . (str_contains($path, '/') ? '/' . dirname($path) : '');
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+            throw new RuntimeException("Cannot create the Trash folder $dir.");
+        }
+        $to = $dir . '/' . free_local_name($dir, basename($path));
+        if (!@rename($from, $to)) {
+            throw new RuntimeException('Could not move the photo to the Trash folder.');
+        }
+        return $to;
     }
 
     public function fetchImages(array $paths): array
@@ -219,6 +246,32 @@ final class DropboxSource implements AlbumSource
             $out[$p][$i % 2 === 0 ? 'grid' : 'large'] = $bytes === false ? null : $bytes;
         }
         return $out;
+    }
+
+    public function trashImage(string $key, string $path): string
+    {
+        // The file id follows the photo even if it was renamed since the last sync.
+        $from = str_starts_with($key, 'id:') ? $key : $this->albumsPath . '/' . $path;
+        if (str_starts_with(strtolower(trash_path() . '/'), strtolower($this->albumsPath . '/'))) {
+            throw new RuntimeException('The Trash folder is inside the albums folder. Set dropbox_trash_path in config.php to a folder outside it.');
+        }
+        try {
+            $r = $this->rpc('/2/files/move_v2', [
+                'from_path'  => $from,
+                'to_path'    => trash_path() . '/' . $path,
+                'autorename' => true,
+            ]);
+        } catch (RuntimeException $e) {
+            $m = $e->getMessage();
+            if (str_contains($m, 'missing_scope') || str_contains($m, 'files.content.write')) {
+                throw new RuntimeException('The Dropbox connection is read-only. Give the Dropbox app the files.content.write permission, then disconnect and reconnect Dropbox on the admin page.');
+            }
+            if (str_contains($m, 'from_lookup/not_found')) {
+                throw new RuntimeException('That photo is no longer in Dropbox. A sync will take it off the site.');
+            }
+            throw $e;
+        }
+        return (string) ($r['metadata']['path_display'] ?? trash_path() . '/' . $path);
     }
 
     /** Account name, used by the admin page to confirm the connection works. */

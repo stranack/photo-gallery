@@ -15,12 +15,14 @@ $GLOBALS['CONFIG'] = [
     'dropbox_app_key'     => '',
     'dropbox_app_secret'  => '',
     'dropbox_albums_path' => '/Photographs/Albums',
+    'dropbox_trash_path'  => '',
     'cover_photo'         => '',
     'slideshow_seconds'   => 5,
     'cron_key'            => '',
     'cron_time_budget'    => 300,
     'timezone'            => 'UTC',
     'local_albums_path'   => '',
+    'local_trash_path'    => '',
     'data_dir'            => '',
 ];
 
@@ -48,3 +50,4 @@ require APP_DIR . '/helpers.php';
 require APP_DIR . '/Sources.php';
 require APP_DIR . '/Gallery.php';
 require APP_DIR . '/Sync.php';
+require APP_DIR . '/Trash.php';

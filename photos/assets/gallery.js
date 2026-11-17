@@ -1,4 +1,4 @@
-/* Photo Gallery: albums, grid, viewer, slideshow, favourites, captions. */
+/* Photo Gallery: albums, grid, viewer, slideshow, favourites, captions, trash. */
 (function () {
   'use strict';
 
@@ -145,6 +145,7 @@
     stopShow();
     closeEditor();
     closeShare();
+    closeDelete();
     lb.open = false;
     lbEl.hidden = true;
     document.body.style.overflow = '';
@@ -157,6 +158,7 @@
     renderCaption(p);
     syncViewerFav();
     closeEditor();
+    closeDelete();
     markStrip();
     var next = new Image();
     var swap = function () {
@@ -256,7 +258,7 @@
     lbEl.classList.remove('idle');
     clearTimeout(lb.idleTimer);
     lb.idleTimer = setTimeout(function () {
-      if (lb.open && lb.timer && !editing() && !sharing()) lbEl.classList.add('idle');
+      if (lb.open && lb.timer && !editing() && !sharing() && !deleting()) lbEl.classList.add('idle');
     }, 2800);
   }
 
@@ -367,6 +369,7 @@
     }
     if (!lb.open) return;
     if (sharing()) { if (e.key === 'Escape') closeShare(); return; }
+    if (deleting()) { if (e.key === 'Escape') closeDelete(); return; }
     if (editing()) { if (e.key === 'Escape') closeEditor(); return; }
     wake();
     if (e.key === 'ArrowRight') go(1);
@@ -374,6 +377,7 @@
     else if (e.key === 'Escape') closeViewer();
     else if (e.key === ' ') { e.preventDefault(); toggleShow(); }
     else if (e.key === 'f' || e.key === 'F') toggleFav(lb.list[lb.i].id);
+    else if ((e.key === 'Delete' || e.key === 'Backspace') && delEl) { e.preventDefault(); openDelete(); }
   });
 
   var playBtn = $('play');
@@ -489,10 +493,68 @@
     });
   }
 
+  // ---- Move to Trash (owner only) -------------------------------------
+  var delEl = $('del-confirm');
+  function deleting() { return delEl && !delEl.hidden; }
+  function openDelete() {
+    if (!delEl) return;
+    stopShow();
+    closeEditor();
+    closeShare();
+    var p = lb.list[lb.i];
+    $('del-img').src = p.g;
+    $('del-img').alt = label(p);
+    $('del-msg').textContent = '';
+    $('del-yes').disabled = false;
+    delEl.hidden = false;
+    lbEl.classList.remove('idle');
+    $('del-no').focus();
+  }
+  function closeDelete() { if (delEl && !$('del-yes').disabled) delEl.hidden = true; }
+  // Take a photo out of every list the page holds, then show what's left.
+  function dropPhoto(id) {
+    for (var i = G.albums.length - 1; i >= 0; i--) {
+      var ps = G.albums[i].photos;
+      for (var j = ps.length - 1; j >= 0; j--) if (ps[j].id === id) ps.splice(j, 1);
+      if (!ps.length) G.albums.splice(i, 1);
+    }
+    delete byId[id];
+    if (favs[id]) { delete favs[id]; saveFavs(); }
+    for (var k = lb.list.length - 1; k >= 0; k--) if (lb.list[k] && lb.list[k].id === id) lb.list.splice(k, 1);
+    if (view !== 'favourites' && !currentAlbum()) {
+      view = G.albums.length ? G.albums[0].slug : null;
+      if (view) history.replaceState(null, '', '#' + view);
+    }
+    render();
+    if (!lb.list.length) { closeViewer(); return; }
+    if (lb.i >= lb.list.length) lb.i = lb.list.length - 1;
+    buildStrip();
+    show(false);
+  }
+  function trashPhoto() {
+    var p = lb.list[lb.i];
+    var yes = $('del-yes');
+    yes.disabled = true;
+    $('del-msg').textContent = 'Moving to the Trash…';
+    fetch('delete.php', { method: 'POST', body: new URLSearchParams({ id: p.id }), headers: { 'X-CSRF': G.csrf }, credentials: 'same-origin' })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not move the photo'); return j; }, function () { throw new Error('Could not move the photo (the server sent an error page).'); }); })
+      .then(function () {
+        yes.disabled = false;
+        delEl.hidden = true;
+        dropPhoto(p.id);
+      })
+      .catch(function (e) { yes.disabled = false; $('del-msg').textContent = e.message; });
+  }
+  if (delEl) {
+    $('lb-del').addEventListener('click', openDelete);
+    $('del-no').addEventListener('click', closeDelete);
+    $('del-yes').addEventListener('click', trashPhoto);
+  }
+
   // Swipe between photos on touch screens.
   var sx = null, sy = null;
   lbEl.addEventListener('touchstart', function (e) {
-    if (editing() || sharing()) { sx = null; return; }
+    if (editing() || sharing() || deleting()) { sx = null; return; }
     sx = e.touches[0].clientX; sy = e.touches[0].clientY; wake();
   }, { passive: true });
   lbEl.addEventListener('touchend', function (e) {
