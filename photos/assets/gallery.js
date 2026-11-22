@@ -1,4 +1,4 @@
-/* Photo Gallery: albums, grid, viewer, slideshow, favourites, captions, trash. */
+/* Photo Gallery: albums, grid, viewer, slideshow, favourites, tags, captions, trash. */
 (function () {
   'use strict';
 
@@ -34,10 +34,57 @@
     return out;
   }
 
+  // ---- Tags: a comma-separated caption field, browsed from the Tags tab --
+  var tagSel = null;
+  function tagList(c) {
+    return String((c && c.tags) || '').split(',').map(function (t) { return t.trim(); }).filter(Boolean);
+  }
+  function allTags() {
+    var m = {};
+    G.albums.forEach(function (a) {
+      a.photos.forEach(function (p) {
+        var seen = {};
+        tagList(p.cap).forEach(function (t) {
+          var k = t.toLowerCase();
+          if (seen[k]) return;
+          seen[k] = 1;
+          if (!m[k]) m[k] = { name: t, n: 0 };
+          m[k].n++;
+        });
+      });
+    });
+    return Object.keys(m).map(function (k) { return m[k]; })
+      .sort(function (a, b) { return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1; });
+  }
+  function taggedPhotos(tag) {
+    var k = String(tag).toLowerCase(), out = [], seen = {};
+    G.albums.forEach(function (a) {
+      a.photos.forEach(function (p) {
+        if (seen[p.id]) return;
+        if (tagList(p.cap).some(function (t) { return t.toLowerCase() === k; })) { seen[p.id] = 1; out.push(p); }
+      });
+    });
+    return out;
+  }
+  function showTag(tag) {
+    tagSel = tag || null;
+    view = 'tags';
+    history.replaceState(null, '', '#tags' + (tagSel ? '/' + encodeURIComponent(tagSel) : ''));
+    if (lb.open) closeViewer();
+    render();
+    var bar = $('gallery');
+    if (bar && bar.getBoundingClientRect().top > 1) bar.scrollIntoView({ behavior: 'smooth' });
+  }
+
   // ---- Which album is showing ------------------------------------------
   var view = null;
   function viewFromHash() {
     var h = decodeURIComponent(location.hash.replace(/^#/, ''));
+    tagSel = null;
+    if (h === 'tags' || h.indexOf('tags/') === 0) {
+      tagSel = h.length > 5 ? h.slice(5) : null;
+      return allTags().length ? 'tags' : (G.albums.length ? G.albums[0].slug : null);
+    }
     if (h === 'favourites') return 'favourites';
     for (var i = 0; i < G.albums.length; i++) if (G.albums[i].slug === h) return h;
     return G.albums.length ? G.albums[0].slug : null;
@@ -48,6 +95,7 @@
   }
   function currentPhotos() {
     if (view === 'favourites') return favPhotos();
+    if (view === 'tags') return tagSel ? taggedPhotos(tagSel) : [];
     var a = currentAlbum();
     return a ? a.photos : [];
   }
@@ -59,6 +107,9 @@
     G.albums.forEach(function (a) {
       html += '<button class="tab" role="tab" data-view="' + esc(a.slug) + '" aria-selected="' + (view === a.slug) + '">' + esc(a.name) + '</button>';
     });
+    if (allTags().length) {
+      html += '<button class="tab" role="tab" data-view="tags" aria-selected="' + (view === 'tags') + '">Tags</button>';
+    }
     var n = Object.keys(favs).filter(function (id) { return byId[id]; }).length;
     if (G.albums.length) {
       html += '<button class="tab" role="tab" data-view="favourites" aria-selected="' + (view === 'favourites') + '" title="Favourites">' +
@@ -74,6 +125,13 @@
     if (!head) return;
     if (view === 'favourites') {
       head.innerHTML = '<h2>Favourites</h2><p>' + (photos.length ? count(photos.length) : 'Tap the heart on any photo to keep it here') + '</p>';
+    } else if (view === 'tags') {
+      var chips = allTags().map(function (t) {
+        var on = tagSel && t.name.toLowerCase() === tagSel.toLowerCase();
+        return '<button type="button" class="tag-chip' + (on ? ' on' : '') + '" data-tag="' + esc(t.name) + '" aria-pressed="' + !!on + '">' + esc(t.name) + ' <span class="n">' + t.n + '</span></button>';
+      }).join('');
+      head.innerHTML = '<h2>' + (tagSel ? esc(tagSel) : 'Tags') + '</h2><p>' +
+        (tagSel ? count(photos.length) : 'Choose a tag to see its photos') + '</p><div class="tag-cloud">' + chips + '</div>';
     } else if (currentAlbum()) {
       head.innerHTML = '<h2>' + esc(currentAlbum().name) + '</h2><p>' + count(photos.length) + '</p>';
     } else {
@@ -223,6 +281,12 @@
     $('cap-meta').textContent = [c.date, c.location].filter(Boolean).join(' · ');
     $('cap-desc').textContent = c.description || '';
     $('cap-desc').title = c.description || '';
+    var tg = $('cap-tags');
+    if (tg) {
+      tg.innerHTML = tagList(c).map(function (t) {
+        return '<button type="button" class="tag-chip" data-tag="' + esc(t) + '">' + esc(t) + '</button>';
+      }).join('');
+    }
     fitStage();
   }
   function fitStage() {
@@ -274,6 +338,7 @@
     $('cap-d').value = c.date || '';
     $('cap-l').value = c.location || '';
     $('cap-x').value = c.description || '';
+    $('cap-g').value = c.tags || '';
     hint('cap-d', auto.date);
     hint('cap-l', auto.location);
     $('cap-reset').hidden = !p.custom;
@@ -308,6 +373,7 @@
       body.set('date', $('cap-d').value);
       body.set('location', $('cap-l').value);
       body.set('description', $('cap-x').value);
+      body.set('tags', $('cap-g').value);
     }
     $('cap-msg').textContent = 'Saving…';
     fetch('caption.php', { method: 'POST', body: body, headers: { 'X-CSRF': G.csrf }, credentials: 'same-origin' })
@@ -317,6 +383,7 @@
         p.custom = j.custom;
         renderCaption(p);
         closeEditor();
+        renderTabs();
         var t = document.querySelector('.tile[data-id="' + p.id + '"]');
         if (t) t.setAttribute('aria-label', label(p) || 'Photo');
       })
@@ -345,9 +412,12 @@
     var t = e.target;
     var fav = t.closest('.fav');
     if (fav) { e.stopPropagation(); toggleFav(fav.getAttribute('data-id')); return; }
+    var chip = t.closest('.tag-chip');
+    if (chip) { showTag(chip.getAttribute('data-tag')); return; }
     var tab = t.closest('.tab');
     if (tab) {
       var v = tab.getAttribute('data-view');
+      if (v === 'tags') { showTag(null); return; }
       history.replaceState(null, '', '#' + v);
       view = v;
       render();
@@ -521,7 +591,7 @@
     delete byId[id];
     if (favs[id]) { delete favs[id]; saveFavs(); }
     for (var k = lb.list.length - 1; k >= 0; k--) if (lb.list[k] && lb.list[k].id === id) lb.list.splice(k, 1);
-    if (view !== 'favourites' && !currentAlbum()) {
+    if (view !== 'favourites' && view !== 'tags' && !currentAlbum()) {
       view = G.albums.length ? G.albums[0].slug : null;
       if (view) history.replaceState(null, '', '#' + view);
     }

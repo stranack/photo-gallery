@@ -358,3 +358,18 @@ code { font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; bac
 .share-list img { width: 64px; height: 48px; object-fit: cover; display: block; }
 .share-list form { margin: 0; }
 .share-list .btn { padding: .6em 1em; }
+
+/* Tags */
+.tag-cloud { display: flex; flex-wrap: wrap; justify-content: center; gap: .4rem .5rem; max-width: 62rem; margin: 1.4rem auto 0; }
+.tag-chip {
+  font: inherit; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; cursor: pointer;
+  color: var(--muted); background: none; border: 1px solid currentColor; border-radius: 999px;
+  padding: .28rem .7rem; opacity: .85;
+}
+.tag-chip:hover, .tag-chip.on { color: var(--ink); opacity: 1; }
+.tag-chip.on { border-color: var(--ink); }
+.tag-chip .n { opacity: .6; margin-left: .25rem; }
+.cap-tags { display: flex; flex-wrap: wrap; gap: .3rem; margin: .5rem 0 0; }
+.cap-tags:empty { display: none; }
+.cap-tags .tag-chip { color: rgba(243,241,237,.7); font-size: .62rem; padding: .18rem .55rem; }
+.cap-tags .tag-chip:hover { color: #fff; }

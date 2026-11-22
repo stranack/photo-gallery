@@ -139,6 +139,7 @@ head_html($title, $css); ?>
     <p class="cap-title" id="cap-title"></p>
     <p class="cap-meta" id="cap-meta"></p>
     <p class="cap-desc" id="cap-desc"></p>
+    <p class="cap-tags" id="cap-tags"></p>
   </div>
   <div class="lb-strip" id="lb-strip" aria-label="All photos in this album"></div>
 
@@ -197,6 +198,9 @@ head_html($title, $css); ?>
     </div>
     <label for="cap-x">Description</label>
     <textarea id="cap-x" rows="3" maxlength="2000"></textarea>
+    <label for="cap-g">Tags</label>
+    <input id="cap-g" maxlength="1700" autocomplete="off" placeholder="e.g. Rural, Prairie, Grain elevator">
+    <p class="cap-hint">Separate tags with commas</p>
     <div class="cap-btns">
       <button type="submit" class="btn btn-solid">Save</button>
       <button type="button" class="btn btn-ghost" id="cap-reset">Use automatic</button>

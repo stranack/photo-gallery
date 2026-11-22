@@ -2,7 +2,7 @@
 /*
  * Saves a caption written on the gallery page. Only the owner (signed in to
  * admin.php in this browser) can do this.
- *   POST id, title, date, location, description   saves the caption details
+ *   POST id, title, date, location, description, tags   saves the caption details
  *   POST id, reset=1       goes back to the date and location from the file name
  */
 declare(strict_types=1);
