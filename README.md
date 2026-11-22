@@ -50,6 +50,19 @@ To edit a caption, sign in with your admin password, either on the gallery's pas
 
 **Save** keeps what you've typed; an emptied field stays empty. **Use automatic** clears your changes to that photo and goes back to the file name. If you leave the date or location as the file name gives them, they keep following the file name, so renaming the file updates them. Your captions are saved on the site (in `data/captions.json`) and stay with the photo if you rename or move it within the albums folder.
 
+## Tags
+
+Each photo can also have **tags**: short labels such as "Rural", "Churches" or "Prairie". Add them in the caption editor (the pencil), separated by commas. They show as small chips under the photo in the full-screen view, and a **Tags** tab appears once any photo has a tag. The tab lists every tag with its photo count; choosing one shows that tag's photos from all albums. A chip in the viewer jumps to the same list, and `#tags/Rural` in the address opens it directly.
+
+To fill in titles, descriptions and tags for many photos at once (for example from a Flickr export), put them in a JSON file and run the importer on the server after a sync:
+
+```
+php app/import.php captions.json --dry-run     # shows what would change
+php app/import.php captions.json
+```
+
+Each entry is `{"file": "…", "title": "…", "description": "…", "tags": "A, B", "album": "…"}`. A photo is found by its file name; add `album` (name or slug) only if the same file name is in several albums. Tags are added to a photo's existing ones, and anything you've typed by hand is kept unless you add `--overwrite`.
+
 ## Sharing and downloads
 
 The share button in the full-screen view opens a panel with a preview card (photo, title, your name, date) and these options:
@@ -93,7 +106,7 @@ photos/              upload this folder to your web space
   delete.php         moves a photo to the Trash folder (owner only)
   admin.php          connect Dropbox, run a sync, check status
   cron.php           optional web-triggered sync
-  app/               code and settings (blocked from the web)
+  app/               code and settings (blocked from the web); import.php adds captions in bulk
   data/              gallery index, captions, sync state (blocked from the web)
   images/            web-sized photo copies, filled in by the sync (blocked from the web)
   assets/            stylesheet, script, icon

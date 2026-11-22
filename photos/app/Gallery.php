@@ -101,13 +101,33 @@ function load_gallery(): array
     return read_json(GALLERY_FILE, ['albums' => [], 'cover' => null]);
 }
 
-const CAPTION_FIELDS = ['title', 'date', 'location', 'description'];
+const CAPTION_FIELDS = ['title', 'date', 'location', 'description', 'tags'];
 
-/** Date and location read from the file name; title and description start empty. */
+/**
+ * Tidy a list of tags typed or imported as text: split on commas, semicolons
+ * and new lines, trim, drop repeats (ignoring case) and keep up to 40 tags of
+ * up to 40 characters. Returns them as one "a, b, c" string.
+ */
+function normalize_tags(string $text): string
+{
+    $out = [];
+    foreach (preg_split('/[,;\n]+/u', $text) ?: [] as $t) {
+        $t = mb_substr(trim((string) preg_replace('/\s+/u', ' ', $t)), 0, 40);
+        if ($t !== '' && !isset($out[mb_strtolower($t)])) {
+            $out[mb_strtolower($t)] = $t;
+        }
+        if (count($out) >= 40) {
+            break;
+        }
+    }
+    return implode(', ', $out);
+}
+
+/** Date and location read from the file name; title, description and tags start empty. */
 function auto_fields(string $file): array
 {
     $p = parse_photo_name($file);
-    return ['title' => '', 'date' => $p['date_label'], 'location' => $p['place'], 'description' => ''];
+    return ['title' => '', 'date' => $p['date_label'], 'location' => $p['place'], 'description' => '', 'tags' => ''];
 }
 
 /**
@@ -154,11 +174,15 @@ function save_caption(string $id, ?array $fields, string $file): void
         $auto = auto_fields($file);
         $keep = [];
         foreach (CAPTION_FIELDS as $f) {
-            $max = $f === 'description' ? 2000 : 200;
+            $max = $f === 'description' ? 2000 : ($f === 'tags' ? 1700 : 200);
             $v = (string) ($fields[$f] ?? '');
-            $v = $f === 'description'
-                ? trim(preg_replace("/[ \t]+/u", ' ', str_replace("\r", '', $v)) ?? '')
-                : trim(preg_replace('/\s+/u', ' ', $v) ?? '');
+            if ($f === 'tags') {
+                $v = normalize_tags($v);
+            } else {
+                $v = $f === 'description'
+                    ? trim(preg_replace("/[ \t]+/u", ' ', str_replace("\r", '', $v)) ?? '')
+                    : trim(preg_replace('/\s+/u', ' ', $v) ?? '');
+            }
             $v = mb_substr($v, 0, $max);
             if ($v !== $auto[$f]) {
                 $keep[$f] = $v;
@@ -175,6 +199,70 @@ function save_caption(string $id, ?array $fields, string $file): void
         flock($fh, LOCK_UN);
         fclose($fh);
     }
+}
+
+/**
+ * Add titles, descriptions, tags and the like from a list of entries, each
+ * {file, album?, title?, description?, tags?, location?, date?}. A photo is
+ * found by its file name (and album name or slug, if given, when the same name
+ * is in several albums). Fields already set by hand are kept unless
+ * $overwrite is true. Tags are added to the ones already there.
+ * @return array{updated:int,unchanged:int,unmatched:string[],ambiguous:string[]}
+ */
+function import_captions(array $entries, bool $overwrite = false): array
+{
+    $byFile = [];
+    foreach (load_gallery()['albums'] ?? [] as $a) {
+        foreach ($a['photos'] as $p) {
+            $byFile[mb_strtolower($p['file'])][] = ['id' => $p['id'], 'file' => $p['file'], 'album' => [mb_strtolower($a['name']), mb_strtolower($a['slug'])]];
+        }
+    }
+    $captions = load_captions();
+    $res = ['updated' => 0, 'unchanged' => 0, 'unmatched' => [], 'ambiguous' => []];
+    foreach ($entries as $e) {
+        $name = (string) ($e['file'] ?? '');
+        $hits = $byFile[mb_strtolower($name)] ?? [];
+        if (!empty($e['album'])) {
+            $want = mb_strtolower((string) $e['album']);
+            $hits = array_values(array_filter($hits, fn($h) => in_array($want, $h['album'], true)));
+        }
+        if (!$hits) {
+            $res['unmatched'][] = $name;
+            continue;
+        }
+        if (count($hits) > 1) {
+            $res['ambiguous'][] = $name;
+            continue;
+        }
+        $h = $hits[0];
+        $cur = caption_fields($h['id'], $h['file'], $captions);
+        $fields = array_intersect_key($cur, array_flip(CAPTION_FIELDS));
+        $auto = auto_fields($h['file']);
+        $changed = false;
+        foreach (CAPTION_FIELDS as $f) {
+            if (!isset($e[$f]) || trim((string) $e[$f]) === '') {
+                continue;
+            }
+            $new = (string) $e[$f];
+            if ($f === 'tags') {
+                $new = normalize_tags($cur['tags'] . ', ' . $new);
+            } elseif (!$overwrite && $fields[$f] !== '' && $fields[$f] !== $auto[$f]) {
+                continue; // typed by hand; leave it
+            }
+            if ($new !== $fields[$f]) {
+                $fields[$f] = $new;
+                $changed = true;
+            }
+        }
+        if ($changed) {
+            save_caption($h['id'], $fields, $h['file']);
+            $captions = load_captions();
+            $res['updated']++;
+        } else {
+            $res['unchanged']++;
+        }
+    }
+    return $res;
 }
 
 /** Find a photo's file name in the gallery index. */
