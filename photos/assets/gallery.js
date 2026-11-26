@@ -1,4 +1,4 @@
-/* Photo Gallery: albums, grid, viewer, slideshow, favourites, tags, captions, trash, public/private albums, zoom. */
+/* Photo Gallery: albums, grid, viewer, slideshow, favourites, tags, captions, trash, public/private albums, zoom, albums page. */
 (function () {
   'use strict';
 
@@ -6,6 +6,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var GLOBE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 12h17M12 3.5c2.3 2.4 3.4 5.2 3.4 8.5s-1.1 6.1-3.4 8.5c-2.3-2.4-3.4-5.2-3.4-8.5s1.1-6.1 3.4-8.5z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
   var LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 10.5V7.8a3.5 3.5 0 0 1 7 0v2.7" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+  var BACK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5 7.5 12l7 7" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
   var HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.6 13a4.7 4.7 0 0 1 6.6-6.7l.8.8.8-.8a4.7 4.7 0 0 1 6.6 6.7z"/></svg>';
 
   var byId = {};
@@ -85,11 +86,11 @@
     tagSel = null;
     if (h === 'tags' || h.indexOf('tags/') === 0) {
       tagSel = h.length > 5 ? h.slice(5) : null;
-      return allTags().length ? 'tags' : (G.albums.length ? G.albums[0].slug : null);
+      return allTags().length ? 'tags' : 'albums';
     }
     if (h === 'favourites') return 'favourites';
     for (var i = 0; i < G.albums.length; i++) if (G.albums[i].slug === h) return h;
-    return G.albums.length ? G.albums[0].slug : null;
+    return 'albums'; // the Albums page is the starting point
   }
   function currentAlbum() {
     for (var i = 0; i < G.albums.length; i++) if (G.albums[i].slug === view) return G.albums[i];
@@ -106,11 +107,10 @@
     var tabs = $('tabs');
     if (!tabs) return;
     var html = '';
-    G.albums.forEach(function (a) {
-      // The owner sees a small lock on private albums' tabs.
-      var lock = G.owner && !a['public'] ? '<span class="tab-lock" title="Private album">' + LOCK + '<span class="visually-hidden"> (private)</span></span>' : '';
-      html += '<button class="tab" role="tab" data-view="' + esc(a.slug) + '" aria-selected="' + (view === a.slug) + '">' + esc(a.name) + lock + '</button>';
-    });
+    if (G.albums.length) {
+      // "Albums" stays underlined inside an album too.
+      html += '<button class="tab" role="tab" data-view="albums" aria-selected="' + (view === 'albums' || !!currentAlbum()) + '">Albums</button>';
+    }
     if (allTags().length) {
       html += '<button class="tab" role="tab" data-view="tags" aria-selected="' + (view === 'tags') + '">Tags</button>';
     }
@@ -136,8 +136,12 @@
       }).join('');
       head.innerHTML = '<h2>' + (tagSel ? esc(tagSel) : 'Tags') + '</h2><p>' +
         (tagSel ? count(photos.length) : 'Choose a tag to see its photos') + '</p><div class="tag-cloud">' + chips + '</div>';
+    } else if (view === 'albums') {
+      var all = G.albums.reduce(function (n, a) { return n + a.photos.length; }, 0);
+      head.innerHTML = '<h2>Albums</h2><p>' + G.albums.length + (G.albums.length === 1 ? ' album' : ' albums') + ' · ' + count(all) + '</p>';
     } else if (currentAlbum()) {
-      head.innerHTML = '<h2>' + esc(currentAlbum().name) + '</h2><p>' + count(photos.length) + '</p>' + visibilityButton(currentAlbum());
+      head.innerHTML = '<a class="back-link" href="#albums">' + BACK + 'All albums</a>' +
+        '<h2>' + esc(currentAlbum().name) + '</h2><p>' + count(photos.length) + '</p>' + visibilityButton(currentAlbum());
     } else {
       head.innerHTML = '';
     }
@@ -172,14 +176,27 @@
       .catch(function (e) { if (btn) btn.disabled = false; var m = $('vis-msg'); if (m) m.textContent = e.message; });
   }
 
+  // ---- Albums page: one card per album, like Flickr's ------------------
+  function albumCards() {
+    return '<div class="album-grid">' + G.albums.map(function (a) {
+      var cover = byId[a.cover] || a.photos[0];
+      var lock = G.owner && !a['public'] ? '<span class="album-card-lock" title="Private album">' + LOCK + '<span class="visually-hidden">Private</span></span>' : '';
+      return '<a class="album-card" href="#' + esc(a.slug) + '">' +
+        (cover ? '<img src="' + esc(cover.g) + '" alt="" loading="lazy" decoding="async" onload="this.classList.add(\'loaded\')">' : '') +
+        lock + '<span class="album-card-text"><span class="album-card-name">' + esc(a.name) + '</span>' +
+        '<span class="album-card-n">' + count(a.photos.length) + '</span></span></a>';
+    }).join('') + '</div>';
+  }
+
   // ---- Justified rows: every row fills the width, photos keep their shape
   var lastWidth = 0;
   function layout() {
     var grid = $('grid');
     if (!grid) return;
-    var photos = currentPhotos();
     var width = grid.clientWidth;
     lastWidth = width;
+    if (view === 'albums') { grid.innerHTML = albumCards(); return; }
+    var photos = currentPhotos();
     var gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 6;
     var target = width < 560 ? 170 : width < 1000 ? 240 : 320;
     var html = '';
@@ -246,9 +263,12 @@
     if (lb.zoom === 2) setZoom(1);
     var p = lb.list[lb.i];
     var token = ++lb.token;
+    clearTimeout(flashTimer);
+    $('lb-count').removeAttribute('data-count');
     $('lb-count').textContent = (lb.i + 1) + ' / ' + lb.list.length;
     renderCaption(p);
     syncViewerFav();
+    if (typeof syncCover === 'function') syncCover();
     closeEditor();
     closeDelete();
     markStrip();
@@ -554,7 +574,7 @@
   var playBtn = $('play');
   if (playBtn) playBtn.addEventListener('click', function () {
     var list = currentPhotos();
-    if (!list.length) list = G.albums.length ? G.albums[0].photos : [];
+    if (!list.length) list = G.albums.reduce(function (all, a) { return all.concat(a.photos); }, []);
     openViewer(list, 0, true);
     if (lbEl.requestFullscreen) lbEl.requestFullscreen().catch(function () {});
   });
@@ -580,6 +600,43 @@
     });
   }
 
+
+  // ---- Album cover (owner only) ---------------------------------------
+  var coverBtn = $('lb-cover');
+  function albumOf(id) {
+    for (var i = 0; i < G.albums.length; i++) {
+      for (var j = 0; j < G.albums[i].photos.length; j++) if (G.albums[i].photos[j].id === id) return G.albums[i];
+    }
+    return null;
+  }
+  function syncCover() {
+    if (!coverBtn) return;
+    var p = lb.list[lb.i], a = p && albumOf(p.id);
+    var on = !!(a && a.cover === p.id);
+    coverBtn.setAttribute('aria-pressed', String(on));
+    coverBtn.title = on ? 'This is the cover of ' + a.name : 'Make this the cover of ' + (a ? a.name : 'its album');
+  }
+  if (coverBtn) coverBtn.addEventListener('click', function () {
+    var p = lb.list[lb.i];
+    fetch('album.php', { method: 'POST', body: new URLSearchParams({ action: 'cover', id: p.id }), headers: { 'X-CSRF': G.csrf }, credentials: 'same-origin' })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not set the cover'); return j; }); })
+      .then(function (j) {
+        G.albums.forEach(function (a) { if (a.slug === j.slug) a.cover = j.cover; });
+        syncCover();
+        flash('Album cover set');
+      })
+      .catch(function (e) { flash(e.message); });
+  });
+  // A short note at the top of the viewer.
+  var flashTimer;
+  function flash(msg) {
+    var c = $('lb-count');
+    var keep = c.getAttribute('data-count') || c.textContent;
+    c.setAttribute('data-count', keep);
+    c.textContent = msg;
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(function () { c.textContent = c.getAttribute('data-count'); c.removeAttribute('data-count'); }, 2200);
+  }
 
   // ---- Share panel ------------------------------------------------------
   var shareEl = $('share');
@@ -694,9 +751,10 @@
     delete byId[id];
     if (favs[id]) { delete favs[id]; saveFavs(); }
     for (var k = lb.list.length - 1; k >= 0; k--) if (lb.list[k] && lb.list[k].id === id) lb.list.splice(k, 1);
-    if (view !== 'favourites' && view !== 'tags' && !currentAlbum()) {
-      view = G.albums.length ? G.albums[0].slug : null;
-      if (view) history.replaceState(null, '', '#' + view);
+    G.albums.forEach(function (a) { if (a.cover === id) a.cover = a.photos[0] ? a.photos[0].id : null; });
+    if (view !== 'favourites' && view !== 'tags' && view !== 'albums' && !currentAlbum()) {
+      view = 'albums';
+      history.replaceState(null, '', '#albums');
     }
     render();
     if (!lb.list.length) { closeViewer(); return; }
@@ -743,7 +801,13 @@
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function () { if ($('grid') && $('grid').clientWidth !== lastWidth) layout(); }, 120);
   });
-  window.addEventListener('hashchange', function () { view = viewFromHash(); render(); });
+  window.addEventListener('hashchange', function () {
+    view = viewFromHash();
+    render();
+    var bar = $('gallery');
+    if (bar && bar.getBoundingClientRect().top > 1) bar.scrollIntoView({ behavior: 'smooth' });
+    else if (bar && window.scrollY > bar.offsetTop) window.scrollTo({ top: bar.offsetTop });
+  });
 
   view = viewFromHash();
   render();

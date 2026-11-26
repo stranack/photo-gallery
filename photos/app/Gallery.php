@@ -374,13 +374,48 @@ function set_album_public(string $slug, bool $public): bool
         if ($a['slug'] === $slug) {
             $folder = (string) ($a['folder'] ?? $a['name']);
             with_album_settings(function (array $all) use ($folder, $public) {
-                $all[$folder] = ['public' => $public];
+                $all[$folder] = ['public' => $public] + ($all[$folder] ?? []);
                 return $all;
             });
             return true;
         }
     }
     return false;
+}
+
+/**
+ * Make a photo the cover of the album it's in, for the Albums page.
+ * Returns that album's slug, or null if the photo isn't in the gallery.
+ */
+function set_album_cover(string $photoId): ?string
+{
+    load_album_settings(); // makes sure the first-time settings exist
+    foreach (load_gallery()['albums'] ?? [] as $a) {
+        foreach ($a['photos'] as $p) {
+            if ($p['id'] === $photoId) {
+                $folder = (string) ($a['folder'] ?? $a['name']);
+                with_album_settings(function (array $all) use ($folder, $photoId) {
+                    $all[$folder] = ($all[$folder] ?? ['public' => false]);
+                    $all[$folder]['cover'] = $photoId;
+                    return $all;
+                });
+                return $a['slug'];
+            }
+        }
+    }
+    return null;
+}
+
+/** The photo shown for an album on the Albums page: the chosen cover, else its first photo. */
+function album_cover_id(array $album, array $settings): ?string
+{
+    $want = $settings[(string) ($album['folder'] ?? $album['name'])]['cover'] ?? null;
+    foreach ($album['photos'] as $p) {
+        if ($p['id'] === $want) {
+            return $want;
+        }
+    }
+    return $album['photos'][0]['id'] ?? null;
 }
 
 /**
@@ -480,7 +515,8 @@ function gallery_for_page(bool $owner, bool $visitor = true): array
             }
             $photos[] = $row;
         }
-        $albums[] = ['slug' => $a['slug'], 'name' => $a['name'], 'public' => $isPublic, 'photos' => $photos];
+        $albums[] = ['slug' => $a['slug'], 'name' => $a['name'], 'public' => $isPublic,
+            'cover' => album_cover_id($a, $settings), 'photos' => $photos];
     }
     $coverRow = $visitor ? ($g['cover'] ?? null) : public_cover($g, $settings);
     $cover = null;

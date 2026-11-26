@@ -8,7 +8,8 @@ Once an hour the site checks the albums folder in Dropbox. It fetches web-sized 
 
 - A cover photo with the gallery title and a **View gallery** button
 - Public albums anyone can see, and private albums that need the gallery password (see [Public and private albums](#public-and-private-albums))
-- One tab per album, plus **Favourites**
+- An **Albums** page, like Flickr's: a card for each album with its cover photo, name and photo count. The header has **Albums**, **Tags** and **Favourites** tabs, and each album has an **All albums** link back
+- Signed in as the owner, the picture button in the full-screen view makes that photo its album's cover (otherwise the album's first photo is used)
 - Photos laid out in justified rows, so every photo keeps its shape
 - A full-screen viewer with arrows, keyboard keys (← → Esc, Space for the slideshow, F for favourite, Z for zoom) and swiping on phones
 - Zoom like Flickr: click the photo to fill the screen, click again to see it at full detail (the web copy's own size, up to 2048 pixels) and move the mouse or drag to look around; click again or press Esc to go back
@@ -25,11 +26,11 @@ Every subfolder of the albums folder (by default `Photographs/Albums` in Dropbox
 ```
 Photographs/Albums/
   cover.jpg                  ← an image here, outside any album, is the cover photo
-  Album 1 Vehicles/          ← shows as "Vehicles", first tab
-  Album 2 Abandoned/         ← shows as "Abandoned", second tab
+  Album 1 Vehicles/          ← shows as "Vehicles", first on the Albums page
+  Album 2 Abandoned/         ← shows as "Abandoned", second
 ```
 
-A number at the start of the folder name sets the order of the tabs and isn't shown: `Album 1 Vehicles` and `01 Vehicles` both appear as **Vehicles**. Photos within an album are sorted by file name, so date-prefixed names come out in date order. Subfolders inside an album are included in that album. Hidden folders (starting with a dot) are skipped.
+A number at the start of the folder name sets the order on the Albums page and isn't shown: `Album 1 Vehicles` and `01 Vehicles` both appear as **Vehicles**. Photos within an album are sorted by file name, so date-prefixed names come out in date order. Subfolders inside an album are included in that album. Hidden folders (starting with a dot) are skipped.
 
 For the cover, the site uses an image placed directly in the albums folder. If there isn't one, it uses the first photo of the first album, or the file named in `cover_photo` in the settings.
 
@@ -39,7 +40,7 @@ JPEG, PNG, GIF, WebP, TIFF, BMP and HEIC files are shown. Raw camera files (NEF,
 
 Each album is **public** or **private**. Anyone who visits the gallery sees the public albums without a password. The private albums appear only after signing in with the gallery password (the **Sign in** button in the header, or `?signin=1`). If no album is public, visitors see the password page first, as before.
 
-Signed in as the owner, open an album: under its name is a button showing a globe (**Public**) or a lock (**Private**). Click it to switch. The change applies at once. Private albums also show a small lock on their tab, for the owner only.
+Signed in as the owner, open an album: under its name is a button showing a globe (**Public**) or a lock (**Private**). Click it to switch. The change applies at once. Private albums also show a small lock on their card on the Albums page, for the owner only.
 
 - When this feature was added, every album was made public except the Tabbernor album.
 - A new album folder starts out private until you make it public. Renaming an album's folder in Dropbox counts as a new album, so check its setting after a rename.
@@ -118,7 +119,7 @@ photos/              upload this folder to your web space
   share.php          public page for a shared photo; creates and removes share links
   caption.php        saves captions you write (owner only)
   delete.php         moves a photo to the Trash folder (owner only)
-  album.php          makes an album public or private (owner only)
+  album.php          makes an album public or private, or sets its cover (owner only)
   admin.php          connect Dropbox, run a sync, check status
   cron.php           optional web-triggered sync
   app/               code and settings (blocked from the web); import.php adds captions in bulk

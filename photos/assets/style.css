@@ -398,3 +398,38 @@ code { font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; bac
 .lb.zoom2 .lb-stage { display: flex; overflow: auto; scrollbar-width: none; overscroll-behavior: contain; touch-action: pan-x pan-y; }
 .lb.zoom2 .lb-stage::-webkit-scrollbar { display: none; }
 .lb.zoom2 .lb-stage img { position: static; flex: none; margin: auto; max-width: none; max-height: none; transition: none; }
+
+/* ---- Albums page: a card per album, cover photo with its name and count ---- */
+.album-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: clamp(8px, 1.4vw, 18px); max-width: 1500px; margin: 0 auto;
+}
+.album-card {
+  position: relative; display: block; aspect-ratio: 1 / 1; overflow: hidden; background: var(--tile);
+  color: #fff; text-decoration: none; animation: tileIn .5s ease-out both;
+}
+.album-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: transform .6s cubic-bezier(.2,.7,.2,1), opacity .4s; }
+.album-card img.loaded { opacity: 1; }
+.album-card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.62), rgba(0,0,0,.12) 45%, transparent 70%); pointer-events: none; }
+.album-card:hover img { transform: scale(1.035); }
+.album-card:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.album-card-text { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 1rem 1.1rem 1.05rem; display: flex; flex-direction: column; gap: .3rem; }
+.album-card-name { font-family: var(--serif); font-size: clamp(1.05rem, 1.6vw, 1.3rem); line-height: 1.2; letter-spacing: .02em; text-shadow: 0 1px 6px rgba(0,0,0,.35); }
+.album-card-n { font-size: .66rem; letter-spacing: .22em; text-transform: uppercase; opacity: .85; }
+.album-card-lock { position: absolute; top: .7rem; right: .7rem; z-index: 1; display: inline-flex; padding: .35rem; border-radius: 50%; background: rgba(0,0,0,.45); }
+.album-card-lock svg { width: 15px; height: 15px; }
+
+/* "All albums" link above an album's name */
+.back-link {
+  display: inline-flex; align-items: center; gap: .3em; margin-bottom: .9rem; color: var(--muted); text-decoration: none;
+  font-size: .68rem; letter-spacing: .22em; text-transform: uppercase;
+}
+.back-link svg { width: 14px; height: 14px; }
+.back-link:hover { color: var(--ink); }
+
+#lb-cover[aria-pressed="true"] { color: #fff; background: rgba(255,255,255,.14); }
+@media (max-width: 760px) {
+  .album-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .album-card-text { padding: .7rem .75rem .8rem; }
+  .album-card-n { font-size: .6rem; letter-spacing: .14em; }
+}

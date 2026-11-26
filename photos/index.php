@@ -99,7 +99,7 @@ head_html($title, $css); ?>
   </div>
 </header>
 
-<nav class="bar" id="gallery" aria-label="Albums">
+<nav class="bar" id="gallery" aria-label="Gallery">
   <a class="bar-title" href="#" data-top><?= h($title) ?></a>
   <div class="tabs" role="tablist" id="tabs"></div>
   <div class="bar-tools">
@@ -135,7 +135,8 @@ head_html($title, $css); ?>
       <button class="icon-btn" id="lb-fav" type="button" aria-label="Favourite" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.6 13a4.7 4.7 0 0 1 6.6-6.7l.8.8.8-.8a4.7 4.7 0 0 1 6.6 6.7z"/></svg></button>
       <button class="icon-btn" id="lb-share" type="button" aria-label="Share or download"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="m8.2 10.8 7.6-4.1M8.2 13.2l7.6 4.1"/></svg></button>
       <button class="icon-btn" id="lb-play" type="button" aria-label="Play slideshow"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-play" d="M8 5.5v13l10.5-6.5z"/><path class="i-pause" d="M7 5h3.5v14H7zm6.5 0H17v14h-3.5z"/></svg></button>
-      <?php if ($owner): ?><button class="icon-btn" id="lb-edit" type="button" aria-label="Edit caption"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 1-4.5L15.8 4.7a1.8 1.8 0 0 1 2.5 0l1 1a1.8 1.8 0 0 1 0 2.5L8.5 19z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
+      <?php if ($owner): ?><button class="icon-btn" id="lb-cover" type="button" aria-label="Make this the album cover" title="Make this the album cover"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m3.5 16 4.6-4.6 3.4 3.4 2.6-2.6 6.4 6.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="15.5" cy="9.3" r="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+      <button class="icon-btn" id="lb-edit" type="button" aria-label="Edit caption"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 1-4.5L15.8 4.7a1.8 1.8 0 0 1 2.5 0l1 1a1.8 1.8 0 0 1 0 2.5L8.5 19z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
       <button class="icon-btn" id="lb-del" type="button" aria-label="Move to Trash" title="Move to Trash"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 6.5h15M9.5 6.5V4.8c0-.4.4-.8.8-.8h3.4c.4 0 .8.4.8.8v1.7M6.5 6.5l.9 12.6c.1.8.7 1.4 1.5 1.4h6.2c.8 0 1.4-.6 1.5-1.4l.9-12.6M10 10.5v6M14 10.5v6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><?php endif; ?>
       <button class="icon-btn" id="lb-close" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6" fill="none"/></svg></button>
     </div>
