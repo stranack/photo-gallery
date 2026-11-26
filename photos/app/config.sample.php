@@ -46,6 +46,10 @@ return [
     // image in the albums folder itself, or else the first photo of the first album.
     'cover_photo' => '',
 
+    // Optional: your GeoNames username, for place-name suggestions in the
+    // Location boxes. You can also enter it on the admin page instead.
+    'geonames_username' => '',
+
     // Seconds each photo stays on screen in the slideshow.
     'slideshow_seconds' => 5,
 

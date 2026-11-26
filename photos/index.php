@@ -222,6 +222,7 @@ head_html($title, $css); ?>
 </div>
 
 <script>window.GALLERY = <?= json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;</script>
+<?php if ($owner): ?><script src="assets/places.js?v=<?= h((string) @filemtime(__DIR__ . '/assets/places.js')) ?>"></script><?php endif; ?>
 <script src="<?= h($js) ?>"></script>
 </body>
 </html>

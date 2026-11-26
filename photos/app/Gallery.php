@@ -101,7 +101,8 @@ function load_gallery(): array
     return read_json(GALLERY_FILE, ['albums' => [], 'cover' => null]);
 }
 
-const CAPTION_FIELDS = ['title', 'date', 'location', 'description', 'tags'];
+// place_id is the GeoNames id of the location, when it was picked from the suggestions.
+const CAPTION_FIELDS = ['title', 'date', 'location', 'description', 'tags', 'place_id'];
 
 /**
  * Tidy a list of tags typed or imported as text: split on commas, semicolons
@@ -127,7 +128,7 @@ function normalize_tags(string $text): string
 function auto_fields(string $file): array
 {
     $p = parse_photo_name($file);
-    return ['title' => '', 'date' => $p['date_label'], 'location' => $p['place'], 'description' => '', 'tags' => ''];
+    return ['title' => '', 'date' => $p['date_label'], 'location' => $p['place'], 'description' => '', 'tags' => '', 'place_id' => ''];
 }
 
 /**
@@ -178,12 +179,17 @@ function save_caption(string $id, ?array $fields, string $file): void
             $v = (string) ($fields[$f] ?? '');
             if ($f === 'tags') {
                 $v = normalize_tags($v);
+            } elseif ($f === 'place_id') {
+                $v = preg_match('/^\d{1,12}$/', trim($v)) ? trim($v) : '';
             } else {
                 $v = $f === 'description'
                     ? trim(preg_replace("/[ \t]+/u", ' ', str_replace("\r", '', $v)) ?? '')
                     : trim(preg_replace('/\s+/u', ' ', $v) ?? '');
             }
             $v = mb_substr($v, 0, $max);
+            if ($f === 'place_id' && trim((string) ($keep['location'] ?? $auto['location'])) === '') {
+                $v = ''; // no location, so no place to point to
+            }
             if ($v !== $auto[$f]) {
                 $keep[$f] = $v;
             }

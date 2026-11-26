@@ -45,6 +45,8 @@
   var form = $('up-form');
   if (!form) return;
   var list = $('up-list');
+  var placeId = '';
+  if (window.PlaceSuggest) window.PlaceSuggest($('up-loc'), function (id) { placeId = id; });
   var files = []; // {file, li}
 
   // The camera's date, read from the start of a JPEG's EXIF data, as YYYY-MM-DD.
@@ -131,7 +133,8 @@
         date: li.querySelector('.f-date').value,
         location: $('up-loc').value,
         description: li.querySelector('.f-desc').value,
-        tags: $('up-tags').value
+        tags: $('up-tags').value,
+        place_id: placeId
       }));
     }).then(function (j) {
       entry.done = true;

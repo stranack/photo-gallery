@@ -57,6 +57,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     $notice = 'Dropbox connected' . $who . '. Run a sync to load your albums.';
                     break;
+                case 'geonames':
+                    save_geonames_username((string) ($_POST['geonames_username'] ?? ''));
+                    $notice = geonames_username() !== '' ? 'Saved. Location boxes now suggest place names from GeoNames.' : 'GeoNames username removed.';
+                    break;
                 case 'unshare':
                     share_remove((string) ($_POST['id'] ?? ''));
                     $notice = 'That photo is no longer shared. Its old link now shows a "not shared" page.';
@@ -218,6 +222,17 @@ $signedIn = !empty($_SESSION['admin']) && is_owner();
     </ul>
   </div>
   <?php endif; ?>
+
+  <div class="panel">
+    <h2>Place names</h2>
+    <p class="hint">Location boxes suggest places from <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a> as you type. It needs a free GeoNames account with <strong>Free Web Services</strong> enabled on its account page.</p>
+    <form method="post" class="inline-form">
+      <input type="hidden" name="csrf" value="<?= $csrf ?>"><input type="hidden" name="action" value="geonames">
+      <label for="gn-user">GeoNames username</label>
+      <input id="gn-user" name="geonames_username" value="<?= h(geonames_username()) ?>" autocomplete="off" <?= cfg('geonames_username') ? 'disabled' : '' ?>>
+      <?php if (!cfg('geonames_username')): ?><button type="submit" class="btn">Save</button><?php else: ?><p class="hint">Set in config.php.</p><?php endif; ?>
+    </form>
+  </div>
 
   <div class="panel">
     <h2>Hourly updates</h2>

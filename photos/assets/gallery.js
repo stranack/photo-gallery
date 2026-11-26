@@ -332,7 +332,9 @@
   function renderCaption(p) {
     var c = p.cap || {};
     $('cap-title').textContent = c.title || '';
-    $('cap-meta').textContent = [c.date, c.location].filter(Boolean).join(' · ');
+    // A location picked from GeoNames links to its GeoNames page.
+    var loc = c.location ? (c.place_id ? '<a href="https://www.geonames.org/' + encodeURIComponent(c.place_id) + '" target="_blank" rel="noopener" title="About this place on GeoNames">' + esc(c.location) + '</a>' : esc(c.location)) : '';
+    $('cap-meta').innerHTML = [c.date ? esc(c.date) : '', loc].filter(Boolean).join(' · ');
     // A description that only repeats the location isn't shown twice.
     var key = function (x) { return String(x || '').toLowerCase().replace(/[^0-9a-z\u00c0-\uffff]+/g, ' ').trim(); };
     var desc = c.description && key(c.description) !== key(c.location) ? c.description : '';
@@ -457,6 +459,8 @@
     $('cap-l').value = c.location || '';
     $('cap-x').value = c.description || '';
     $('cap-g').value = c.tags || '';
+    placeId = c.place_id || '';
+    if (placeBox) placeBox.set(placeId);
     hint('cap-d', auto.date);
     hint('cap-l', auto.location);
     $('cap-reset').hidden = !p.custom;
@@ -492,6 +496,7 @@
       body.set('location', $('cap-l').value);
       body.set('description', $('cap-x').value);
       body.set('tags', $('cap-g').value);
+      body.set('place_id', placeId);
     }
     $('cap-msg').textContent = 'Saving…';
     fetch('caption.php', { method: 'POST', body: body, headers: { 'X-CSRF': G.csrf }, credentials: 'same-origin' })
@@ -507,6 +512,10 @@
       })
       .catch(function (e) { $('cap-msg').textContent = e.message; });
   }
+
+  // Place-name suggestions in the editor's Location box (from GeoNames).
+  var placeId = '';
+  var placeBox = form && window.PlaceSuggest ? window.PlaceSuggest($('cap-l'), function (id) { placeId = id; }) : null;
 
   // ---- Wiring -----------------------------------------------------------
   /** A one-line description of a photo, for screen readers and alt text. */

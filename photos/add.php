@@ -203,6 +203,7 @@ $page = [
 <?php endif; ?>
 </main>
 <script>window.ADD = <?= json_encode($page, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) ?>;</script>
+<script src="assets/places.js?v=<?= h((string) @filemtime(__DIR__ . '/assets/places.js')) ?>"></script>
 <script src="<?= h($js) ?>"></script>
 </body>
 </html>

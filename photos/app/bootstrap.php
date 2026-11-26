@@ -19,6 +19,7 @@ $GLOBALS['CONFIG'] = [
     'cover_photo'         => '',
     'slideshow_seconds'   => 5,
     'cron_key'            => '',
+    'geonames_username'   => '',
     'cron_time_budget'    => 300,
     'timezone'            => 'UTC',
     'local_albums_path'   => '',
@@ -53,3 +54,4 @@ require APP_DIR . '/Gallery.php';
 require APP_DIR . '/Sync.php';
 require APP_DIR . '/Trash.php';
 require APP_DIR . '/Upload.php';
+require APP_DIR . '/Places.php';

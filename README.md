@@ -76,6 +76,12 @@ To edit a caption, sign in with your admin password, either on the gallery's pas
 
 **Save** keeps what you've typed; an emptied field stays empty. **Use automatic** clears your changes to that photo and goes back to the file name. If you leave the date or location as the file name gives them, they keep following the file name, so renaming the file updates them. Your captions are saved on the site (in `data/captions.json`) and stay with the photo if you rename or move it within the albums folder.
 
+## Place names
+
+The Location boxes (in the caption editor and on the Add image page) suggest places from [GeoNames](https://www.geonames.org), a free gazetteer, as you type: "Clayb" offers Claybank, Saskatchewan, Canada. Canadian places come first. Picking one fills in the location as "Town, Province, Country" and saves the place's GeoNames id with the caption; the location then links to the place's GeoNames page in the full-screen view. You can still type any place yourself.
+
+It needs a free GeoNames account: register at geonames.org, enable **Free Web Services** on your account page, then enter the username under **Place names** on the admin page (or set `geonames_username` in `config.php`). Only the owner's typing uses it, and answers are kept for a month, well within GeoNames' free allowance. GeoNames data is CC-BY, credited in the suggestion list and by the location links.
+
 ## Tags
 
 Each photo can also have **tags**: short labels such as "Rural", "Churches" or "Prairie". Add them in the caption editor (the pencil), separated by commas. They show as small chips under the photo in the full-screen view, and a **Tags** tab appears once any photo has a tag. The tab lists every tag with its photo count; choosing one shows that tag's photos from all albums. A chip in the viewer jumps to the same list, and `#tags/Rural` in the address opens it directly.
@@ -132,6 +138,7 @@ photos/              upload this folder to your web space
   delete.php         moves a photo to the Trash folder (owner only)
   album.php          makes an album public or private, or sets its cover (owner only)
   add.php            Add image and Add album pages: uploads to Dropbox (owner only)
+  place.php          place-name suggestions from GeoNames (owner only)
   admin.php          connect Dropbox, run a sync, check status
   cron.php           optional web-triggered sync
   app/               code and settings (blocked from the web); import.php adds captions in bulk
