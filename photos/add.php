@@ -127,7 +127,7 @@ $page = [
     'tags' => all_tag_names(),
 ];
 ?><!doctype html>
-<html lang="en">
+<html lang="en"<?= app_html_attrs('add') ?>>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -135,7 +135,7 @@ $page = [
 <title><?= $mode === 'album' ? 'Add album' : 'Add images' ?> · <?= h(cfg('site_title', 'Photographs')) ?></title>
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="<?= h($css) ?>">
-</head>
+<?= app_head_tags() ?></head>
 <body class="admin add-page">
 <main class="admin-wrap add-wrap">
   <p class="admin-back"><a href="./">&larr; <?= h(cfg('site_title', 'Photographs')) ?></a></p>

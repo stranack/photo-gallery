@@ -45,7 +45,7 @@ $js = 'assets/gallery.js?v=' . @filemtime(__DIR__ . '/assets/gallery.js');
 
 function head_html(string $title, string $css): void
 { ?><!doctype html>
-<html lang="en">
+<html lang="en"<?= app_html_attrs('gallery') ?>>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -54,7 +54,7 @@ function head_html(string $title, string $css): void
 <title><?= h($title) ?></title>
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="<?= h($css) ?>">
-</head>
+<?= app_head_tags() ?></head>
 <?php }
 
 if (!$allowed):

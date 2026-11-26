@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 $signedIn = !empty($_SESSION['admin']) && is_owner();
 ?><!doctype html>
-<html lang="en">
+<html lang="en"<?= app_html_attrs('admin') ?>>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -97,7 +97,7 @@ $signedIn = !empty($_SESSION['admin']) && is_owner();
 <title>Admin · <?= h(cfg('site_title')) ?></title>
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/style.css?v=<?= h((string) @filemtime(__DIR__ . '/assets/style.css')) ?>">
-</head>
+<?= app_head_tags() ?></head>
 <body class="admin">
 <main class="admin-wrap">
   <p class="admin-back"><a href="./">&larr; <?= h(cfg('site_title')) ?></a></p>

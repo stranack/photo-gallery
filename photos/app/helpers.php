@@ -133,3 +133,31 @@ function failed_attempt_pause(): void
 {
     usleep(random_int(800000, 1500000));
 }
+
+// ---- Installing as an app -------------------------------------------------
+
+/**
+ * Attributes for <html>: whether this browser can see the private albums, and
+ * which page it is. assets/app.js reads them to keep the photos saved on the
+ * device in step with what the browser may see.
+ */
+function app_html_attrs(string $page): string
+{
+    return ' data-visitor="' . (is_visitor() ? '1' : '0') . '" data-page="' . h($page) . '"';
+}
+
+/**
+ * What makes the site installable as an app: the manifest, home-screen
+ * icons, the bar colour, and the script that registers the service worker.
+ */
+function app_head_tags(): string
+{
+    $v = h((string) @filemtime(APP_ROOT . '/assets/app.js'));
+    return '<link rel="manifest" href="manifest.php">' . "\n"
+        . '<meta name="theme-color" content="#1f1e1c">' . "\n"
+        . '<meta name="mobile-web-app-capable" content="yes">' . "\n"
+        . '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n"
+        . '<meta name="apple-mobile-web-app-status-bar-style" content="black">' . "\n"
+        . '<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">' . "\n"
+        . '<script src="assets/app.js?v=' . $v . '" defer></script>' . "\n";
+}

@@ -128,6 +128,14 @@ This needs the Dropbox app's **files.content.write** permission (step 1 of Setup
 
 If you share the Dropbox app with Kevin's Library, the library's connection gets the new permission only when you reconnect it there too; it doesn't need it.
 
+## Installing as an app, and viewing offline
+
+The gallery can be installed as an app. In Chrome on Android, open the gallery, tap the **⋮** menu and choose **Add to Home screen** (or **Install app**). On an iPhone or iPad, use Safari's **Share** button and **Add to Home Screen**. On a computer, Chrome and Edge show an install button at the right of the address bar. The app opens full screen, with no address bar or tabs. It needs the site on `https`, which a service worker requires.
+
+The service worker (`sw.js`) keeps copies of the gallery page, its styles and scripts, and the photos you look at, so the gallery opens quickly and still opens with no connection. Up to 1,000 grid photos and the 150 most recent full-screen photos are kept; older ones are dropped. Offline, a photo that isn't saved shows a grey "Not saved for offline" tile, and the Admin and Add pages show `offline.html`.
+
+Saved photos follow what the browser is allowed to see. Each time the gallery opens online, photos that were deleted, replaced, or are in an album that is now private (for a browser without the password) are dropped from the device. Signing out does the same, and a browser that only gets the password page keeps no photos at all. Captions, covers and other owner changes still need a connection.
+
 ## Requirements
 
 - PHP 8.0 or newer with the `curl` and `json` extensions, standard on shared hosts
@@ -139,6 +147,9 @@ If you share the Dropbox app with Kevin's Library, the library's connection gets
 ```
 photos/              upload this folder to your web space
   index.php          password page and gallery
+  manifest.php       web app manifest, so the gallery installs as an app
+  sw.js              service worker: saved pages and photos for speed and offline use
+  offline.html       shown offline for pages that aren't saved
   img.php            hands photos only to visitors with the password (or a share link)
   share.php          public page for a shared photo; creates and removes share links
   caption.php        saves captions you write (owner only)
