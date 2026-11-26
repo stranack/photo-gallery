@@ -39,6 +39,30 @@ interface AlbumSource
      */
     public function trashImage(string $key, string $path): string;
 
+    /**
+     * The album folders directly inside the albums folder, empty ones included.
+     * @return string[] folder names
+     */
+    public function listAlbumFolders(): array;
+
+    /** Create a folder for a new album. Returns its name as created. */
+    public function createAlbumFolder(string $name): string;
+
+    /**
+     * Upload a file in pieces, so no single request is large: start with the
+     * first piece, append the rest in order, then finish to save it.
+     */
+    public function uploadStart(string $bytes): string;
+
+    public function uploadAppend(string $session, int $offset, string $bytes): void;
+
+    /**
+     * Save an uploaded file at $relPath (relative to the albums folder). A name
+     * already taken gets a number added.
+     * @return array{key:string,path:string} as listImages() would give them
+     */
+    public function uploadFinish(string $session, int $offset, string $relPath): array;
+
     public function describe(): string;
 }
 
@@ -105,6 +129,65 @@ final class LocalSource implements AlbumSource
             throw new RuntimeException('Could not move the photo to the Trash folder.');
         }
         return $to;
+    }
+
+    public function listAlbumFolders(): array
+    {
+        $out = [];
+        foreach (is_dir($this->root) ? scandir($this->root) : [] as $n) {
+            if ($n[0] !== '.' && is_dir($this->root . '/' . $n)) {
+                $out[] = $n;
+            }
+        }
+        return $out;
+    }
+
+    public function createAlbumFolder(string $name): string
+    {
+        if (!@mkdir($this->root . '/' . $name, 0755) && !is_dir($this->root . '/' . $name)) {
+            throw new RuntimeException("Could not create the album folder $name.");
+        }
+        return $name;
+    }
+
+    private function partFile(string $session): string
+    {
+        if (!preg_match('/^local-[0-9a-f]{24}$/', $session)) {
+            throw new RuntimeException('Unknown upload.');
+        }
+        ensure_data_dir();
+        return DATA_DIR . '/' . $session . '.part';
+    }
+
+    public function uploadStart(string $bytes): string
+    {
+        $session = 'local-' . bin2hex(random_bytes(12));
+        file_put_contents($this->partFile($session), $bytes);
+        return $session;
+    }
+
+    public function uploadAppend(string $session, int $offset, string $bytes): void
+    {
+        $f = $this->partFile($session);
+        clearstatcache(true, $f);
+        if (!is_file($f) || filesize($f) !== $offset) {
+            throw new RuntimeException('The upload got out of step. Try again.');
+        }
+        file_put_contents($f, $bytes, FILE_APPEND);
+    }
+
+    public function uploadFinish(string $session, int $offset, string $relPath): array
+    {
+        $f = $this->partFile($session);
+        clearstatcache(true, $f);
+        if (!is_file($f) || filesize($f) !== $offset) {
+            throw new RuntimeException('The upload is incomplete. Try again.');
+        }
+        $dir = $this->root . '/' . dirname($relPath);
+        $name = free_local_name($dir, basename($relPath));
+        rename($f, $dir . '/' . $name);
+        $rel = dirname($relPath) . '/' . $name;
+        return ['key' => 'local:' . $rel, 'path' => $rel];
     }
 
     public function fetchImages(array $paths): array
@@ -272,6 +355,107 @@ final class DropboxSource implements AlbumSource
             throw $e;
         }
         return (string) ($r['metadata']['path_display'] ?? trash_path() . '/' . $path);
+    }
+
+    public function listAlbumFolders(): array
+    {
+        $out = [];
+        $r = $this->rpc('/2/files/list_folder', ['path' => $this->albumsPath, 'recursive' => false, 'limit' => 2000]);
+        while (true) {
+            foreach ($r['entries'] ?? [] as $e) {
+                $n = (string) ($e['name'] ?? '');
+                if (($e['.tag'] ?? '') === 'folder' && $n !== '' && $n[0] !== '.') {
+                    $out[] = $n;
+                }
+            }
+            if (empty($r['has_more'])) {
+                break;
+            }
+            $r = $this->rpc('/2/files/list_folder/continue', ['cursor' => $r['cursor']]);
+        }
+        return $out;
+    }
+
+    public function createAlbumFolder(string $name): string
+    {
+        $r = $this->writeCall(fn() => $this->rpc('/2/files/create_folder_v2', [
+            'path' => $this->albumsPath . '/' . $name,
+            'autorename' => false,
+        ]));
+        return (string) ($r['metadata']['name'] ?? $name);
+    }
+
+    public function uploadStart(string $bytes): string
+    {
+        $r = $this->writeCall(fn() => $this->content('/2/files/upload_session/start', ['close' => false], $bytes));
+        if (empty($r['session_id'])) {
+            throw new RuntimeException('Dropbox did not start the upload.');
+        }
+        return (string) $r['session_id'];
+    }
+
+    public function uploadAppend(string $session, int $offset, string $bytes): void
+    {
+        $this->writeCall(fn() => $this->content('/2/files/upload_session/append_v2', [
+            'cursor' => ['session_id' => $session, 'offset' => $offset],
+            'close'  => false,
+        ], $bytes));
+    }
+
+    public function uploadFinish(string $session, int $offset, string $relPath): array
+    {
+        $r = $this->writeCall(fn() => $this->content('/2/files/upload_session/finish', [
+            'cursor' => ['session_id' => $session, 'offset' => $offset],
+            'commit' => ['path' => $this->albumsPath . '/' . $relPath, 'mode' => 'add', 'autorename' => true, 'mute' => true],
+        ], ''));
+        if (empty($r['id'])) {
+            throw new RuntimeException('Dropbox did not save the photo.');
+        }
+        $name = (string) ($r['name'] ?? basename($relPath));
+        return ['key' => (string) $r['id'], 'path' => dirname($relPath) . '/' . $name];
+    }
+
+    /** Explain a missing write permission in plain words. */
+    private function writeCall(callable $call): array
+    {
+        try {
+            return $call();
+        } catch (RuntimeException $e) {
+            $m = $e->getMessage();
+            if (str_contains($m, 'missing_scope') || str_contains($m, 'files.content.write')) {
+                throw new RuntimeException('The Dropbox connection is read-only. Give the Dropbox app the files.content.write permission, then disconnect and reconnect Dropbox on the admin page.');
+            }
+            if (str_contains($m, 'path/conflict')) {
+                throw new RuntimeException('There is already a folder with that name in Dropbox.');
+            }
+            throw $e;
+        }
+    }
+
+    /** A content-upload call: arguments in the Dropbox-API-Arg header, data in the body. */
+    private function content(string $endpoint, array $args, string $bytes): array
+    {
+        // json_encode escapes non-ASCII characters, as the header requires.
+        $arg = json_encode($args, JSON_UNESCAPED_SLASHES);
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            [$status, $body, $headers] = http_post($this->contentHost . $endpoint, [
+                'Authorization: Bearer ' . $this->token(),
+                'Dropbox-API-Arg: ' . $arg,
+                'Content-Type: application/octet-stream',
+            ], $bytes);
+            if ($status === 429 || $status >= 500) {
+                $wait = (int) ($headers['retry-after'] ?? 0) ?: 2 * $attempt;
+                sleep(min($wait, 30));
+                continue;
+            }
+            break;
+        }
+        $json = json_decode((string) $body, true);
+        if ($status !== 200) {
+            $summary = is_array($json) ? ($json['error_summary'] ?? '') : substr((string) $body, 0, 300);
+            throw new RuntimeException("Dropbox $endpoint failed (HTTP $status): $summary");
+        }
+        return is_array($json) ? $json : [];
     }
 
     /** Account name, used by the admin page to confirm the connection works. */

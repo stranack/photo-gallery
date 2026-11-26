@@ -48,6 +48,17 @@ Signed in as the owner, open an album: under its name is a button showing a glob
 - Making an album private doesn't turn off share links already made for its photos. Use **Stop sharing** for those.
 - Settings are saved on the site in `data/albums.json`.
 
+## Adding photos and albums from the gallery
+
+Signed in as the owner, the header has **Add image** and **Add album**, so you don't need to open Dropbox.
+
+- **Add album** asks for a name and whether it's public or private, and creates the next numbered folder in the albums folder (`Album 15 Grain Elevators`), so the new album comes last. It shows on the gallery once it has photos.
+- **Add image** uploads one or more photos into an album you choose. Location and tags apply to every photo in the batch; each photo has its own title, date and description. The date is filled in from the camera's EXIF data when there is one.
+- Each photo is renamed in the style of `prefix_photo_dates.py`, so a photo taken 26 June 2024 in Sandon becomes `2024-06-26_Sandon_British-Columbia_Canada_DSC_4410.jpg`, and its date and location follow the file name. A date such as "Summer 1991", or a file that already starts with a date, keeps the file's name, and the date and location go in the caption.
+- The original goes to Dropbox at full size, sent in pieces of up to 4 MB, so PHP's upload limit doesn't matter. A short sync then puts the photos in the gallery straight away.
+
+Both need the Dropbox app's **files.content.write** permission, the same as the trash button.
+
 ## Captions
 
 Each photo's caption has four parts: a **title**, a **date**, a **location** and a **description**. They show under the photo in the full-screen view: the title first, then the date and location on one line, then the description.
@@ -120,6 +131,7 @@ photos/              upload this folder to your web space
   caption.php        saves captions you write (owner only)
   delete.php         moves a photo to the Trash folder (owner only)
   album.php          makes an album public or private, or sets its cover (owner only)
+  add.php            Add image and Add album pages: uploads to Dropbox (owner only)
   admin.php          connect Dropbox, run a sync, check status
   cron.php           optional web-triggered sync
   app/               code and settings (blocked from the web); import.php adds captions in bulk

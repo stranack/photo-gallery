@@ -52,3 +52,4 @@ require APP_DIR . '/Sources.php';
 require APP_DIR . '/Gallery.php';
 require APP_DIR . '/Sync.php';
 require APP_DIR . '/Trash.php';
+require APP_DIR . '/Upload.php';
