@@ -620,6 +620,25 @@ function any_public_album(): bool
 }
 
 /**
+ * Album order: newest photo first, by the date at the start of the file name.
+ * Photos with only a year sit after the dated ones from that year; photos with
+ * no date go last. Same date: later file name first (later frame number).
+ */
+function newest_first(array $x, array $y): int
+{
+    $dx = parse_photo_name($x['file'])['date'];
+    $dy = parse_photo_name($y['file'])['date'];
+    if ($dx === null || $dy === null) {
+        if ($dx !== $dy) {
+            return $dx === null ? 1 : -1;
+        }
+    } elseif ($dx !== $dy) {
+        return strcmp($dy, $dx);
+    }
+    return strnatcasecmp($y['file'], $x['file']);
+}
+
+/**
  * The data the gallery page hands to its script. Visitors with the password
  * (and the owner) get every album; everyone else gets only the public ones.
  */
@@ -646,19 +665,15 @@ function gallery_for_page(bool $owner, bool $visitor = true): array
         if (!$visitor && !$isPublic) {
             continue;
         }
-        // Its own photos, then photos from other albums also shown here, in file-name order.
+        // Its own photos, then photos from other albums also shown here, newest first.
         $list = $a['photos'];
         $own = array_flip(array_column($a['photos'], 'id'));
-        $extra = false;
         foreach (album_also($a, $settings) as $xid) {
             if (isset($byId[$xid]) && !isset($own[$xid])) {
                 $list[] = $byId[$xid] + ['also' => true];
-                $extra = true;
             }
         }
-        if ($extra) {
-            usort($list, fn($x, $y) => strnatcasecmp($x['file'], $y['file']));
-        }
+        usort($list, 'newest_first');
         $photos = [];
         foreach ($list as $p) {
             $row = [

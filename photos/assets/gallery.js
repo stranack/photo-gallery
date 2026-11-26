@@ -575,12 +575,26 @@
           G.albums.forEach(function (a) {
             if (a.slug !== slug) return;
             a.photos.push(p);
-            a.photos.sort(function (x, y) { return String(x.file).localeCompare(String(y.file), undefined, { numeric: true, sensitivity: 'base' }); });
+            a.photos.sort(newestFirst);
           });
         });
         if (j.moved && !j.synced) flash('Moved. The gallery catches up at the next sync');
         else if (j.moved) flash('Moved to ' + albumName(j.home));
       });
+  }
+  // Same order as the server: newest date in the file name first, undated last.
+  function photoDate(file) {
+    var m = String(file).match(/^(\d{4}-\d{2}-\d{2}|(?:19|20)\d{2})(?:[_.]|$)/);
+    return m ? m[1] : null;
+  }
+  function newestFirst(x, y) {
+    var dx = photoDate(x.file), dy = photoDate(y.file);
+    if (dx !== dy) {
+      if (dx === null) return 1;
+      if (dy === null) return -1;
+      return dx < dy ? 1 : -1;
+    }
+    return String(y.file).localeCompare(String(x.file), undefined, { numeric: true, sensitivity: 'base' });
   }
   function albumName(slug) {
     for (var i = 0; i < G.albums.length; i++) if (G.albums[i].slug === slug) return G.albums[i].name;
