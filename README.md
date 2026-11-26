@@ -10,7 +10,8 @@ Once an hour the site checks the albums folder in Dropbox. It fetches web-sized 
 - Public albums anyone can see, and private albums that need the gallery password (see [Public and private albums](#public-and-private-albums))
 - One tab per album, plus **Favourites**
 - Photos laid out in justified rows, so every photo keeps its shape
-- A full-screen viewer with arrows, keyboard keys (← → Esc, Space for the slideshow, F for favourite) and swiping on phones
+- A full-screen viewer with arrows, keyboard keys (← → Esc, Space for the slideshow, F for favourite, Z for zoom) and swiping on phones
+- Zoom like Flickr: click the photo to fill the screen, click again to see it at full detail (the web copy's own size, up to 2048 pixels) and move the mouse or drag to look around; click again or press Esc to go back
 - A slideshow with cross-fades that goes full screen
 - Favourites: visitors tap the heart on any photo, and the Favourites tab collects them. They're saved in the visitor's own browser.
 - Captions made from your file names, which you can replace with your own words

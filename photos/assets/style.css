@@ -384,7 +384,17 @@ code { font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; bac
 .tag-chip:hover, .tag-chip.on { color: var(--ink); opacity: 1; }
 .tag-chip.on { border-color: var(--ink); }
 .tag-chip .n { opacity: .6; margin-left: .25rem; }
-.cap-tags { display: flex; flex-wrap: wrap; gap: .3rem; margin: .5rem 0 0; }
+.cap-tags, .lb-cap .cap-tags { display: flex; flex-wrap: wrap; gap: .35rem; margin: .95rem 0 0; }
 .cap-tags:empty { display: none; }
 .cap-tags .tag-chip { color: rgba(243,241,237,.7); font-size: .62rem; padding: .18rem .55rem; }
 .cap-tags .tag-chip:hover { color: #fff; }
+
+/* ---- Zoom: click the photo to fill the screen, again for full detail ---- */
+.lb-stage img { cursor: zoom-in; }
+.lb.zoom .lb-top, .lb.zoom .lb-nav, .lb.zoom .lb-cap, .lb.zoom .lb-strip { opacity: 0; pointer-events: none; }
+.lb.zoom .lb-stage { inset: 0 !important; }
+.lb.zoom .lb-stage img { box-shadow: none; }
+.lb.zoom.zoom-max .lb-stage img, .lb.zoom2 .lb-stage img { cursor: zoom-out; }
+.lb.zoom2 .lb-stage { display: flex; overflow: auto; scrollbar-width: none; overscroll-behavior: contain; touch-action: pan-x pan-y; }
+.lb.zoom2 .lb-stage::-webkit-scrollbar { display: none; }
+.lb.zoom2 .lb-stage img { position: static; flex: none; margin: auto; max-width: none; max-height: none; transition: none; }

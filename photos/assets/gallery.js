@@ -1,4 +1,4 @@
-/* Photo Gallery: albums, grid, viewer, slideshow, favourites, tags, captions, trash, public/private albums. */
+/* Photo Gallery: albums, grid, viewer, slideshow, favourites, tags, captions, trash, public/private albums, zoom. */
 (function () {
   'use strict';
 
@@ -215,7 +215,7 @@
   }
 
   // ---- Viewer -----------------------------------------------------------
-  var lb = { open: false, list: [], i: 0, timer: null, idleTimer: null, token: 0 };
+  var lb = { open: false, list: [], i: 0, timer: null, idleTimer: null, token: 0, zoom: 0 };
   var lbEl = $('lb');
   var img = $('lb-img');
 
@@ -232,6 +232,7 @@
     wake();
   }
   function closeViewer() {
+    setZoom(0);
     stopShow();
     closeEditor();
     closeShare();
@@ -242,6 +243,7 @@
     if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
   }
   function show(fade) {
+    if (lb.zoom === 2) setZoom(1);
     var p = lb.list[lb.i];
     var token = ++lb.token;
     $('lb-count').textContent = (lb.i + 1) + ' / ' + lb.list.length;
@@ -326,6 +328,7 @@
   }
   function fitStage() {
     if (!lb.open) return;
+    if (lb.zoom) { $('lb-stage').style.bottom = ''; return; }
     var below = (strip.hidden ? 12 : strip.offsetHeight) + $('lb-cap').offsetHeight + 8;
     $('lb-stage').style.bottom = Math.max(below, window.innerWidth < 760 ? 72 : 76) + 'px';
   }
@@ -336,9 +339,69 @@
     if (p) $('lb-fav').setAttribute('aria-pressed', String(isFav(p.id)));
   }
 
+  // ---- Zoom, like Flickr's lightbox ------------------------------------
+  // 0: normal viewer. 1: the photo fills the screen, controls hidden.
+  // 2: full detail (the photo at its own size); move the mouse or drag to look around.
+  var stage = $('lb-stage');
+  function canZoomMore() {
+    return img.naturalWidth > stage.clientWidth + 8 || img.naturalHeight > stage.clientHeight + 8;
+  }
+  function setZoom(level, ev) {
+    lb.zoom = level;
+    lbEl.classList.toggle('zoom', level > 0);
+    lbEl.classList.toggle('zoom2', level === 2);
+    lbEl.classList.remove('zoom-max');
+    if (level === 1 && !canZoomMore()) lbEl.classList.add('zoom-max');
+    if (level === 2 && ev) {
+      // Start with the spot that was clicked in the middle of the screen.
+      var r = img.getBoundingClientRect();
+      var fx = r.width ? (ev.clientX - r.left) / r.width : 0.5;
+      var fy = r.height ? (ev.clientY - r.top) / r.height : 0.5;
+      requestAnimationFrame(function () { panTo(fx, fy); });
+    }
+    if (level === 0) stage.scrollTo(0, 0);
+    fitStage();
+  }
+  function panTo(fx, fy) {
+    stage.scrollLeft = Math.max(0, Math.min(1, fx)) * (stage.scrollWidth - stage.clientWidth);
+    stage.scrollTop = Math.max(0, Math.min(1, fy)) * (stage.scrollHeight - stage.clientHeight);
+  }
+  function zoomStep(ev) {
+    if (lb.zoom === 0) { stopShow(); setZoom(1); }
+    else if (lb.zoom === 1) setZoom(canZoomMore() ? 2 : 0, ev);
+    else setZoom(0);
+  }
+  img.addEventListener('click', function (e) {
+    if (lb.dragged) { lb.dragged = false; return; }
+    zoomStep(e);
+  });
+  // At full detail, the mouse position picks which part of the photo shows.
+  stage.addEventListener('mousemove', function (e) {
+    if (lb.zoom !== 2 || e.buttons) return;
+    var r = stage.getBoundingClientRect();
+    panTo((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
+  });
+  // A mouse drag at full detail moves the photo instead of counting as a click.
+  var drag = null;
+  stage.addEventListener('mousedown', function (e) {
+    if (lb.zoom !== 2) return;
+    e.preventDefault();
+    drag = { x: e.clientX, y: e.clientY, l: stage.scrollLeft, t: stage.scrollTop };
+    lb.dragged = false;
+  });
+  window.addEventListener('mousemove', function (e) {
+    if (!drag) return;
+    var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 4) lb.dragged = true;
+    stage.scrollLeft = drag.l - dx;
+    stage.scrollTop = drag.t - dy;
+  });
+  window.addEventListener('mouseup', function () { drag = null; });
+
   // ---- Slideshow --------------------------------------------------------
   function startShow() {
     stopShow();
+    if (lb.zoom === 2) setZoom(1);
     lbEl.classList.add('playing');
     $('lb-play').setAttribute('aria-label', 'Pause slideshow');
     lb.timer = setInterval(function () { go(1, true); }, (G.slideshowSeconds || 5) * 1000);
@@ -481,7 +544,8 @@
     wake();
     if (e.key === 'ArrowRight') go(1);
     else if (e.key === 'ArrowLeft') go(-1);
-    else if (e.key === 'Escape') closeViewer();
+    else if (e.key === 'Escape') { if (lb.zoom) setZoom(lb.zoom - 1); else closeViewer(); }
+    else if (e.key === 'z' || e.key === 'Z') zoomStep();
     else if (e.key === ' ') { e.preventDefault(); toggleShow(); }
     else if (e.key === 'f' || e.key === 'F') toggleFav(lb.list[lb.i].id);
     else if ((e.key === 'Delete' || e.key === 'Backspace') && delEl) { e.preventDefault(); openDelete(); }
@@ -502,6 +566,8 @@
   lbEl.addEventListener('mousemove', wake);
   $('lb-stage').addEventListener('click', function (e) {
     if (e.target === img) return;
+    if (lb.dragged) { lb.dragged = false; return; }
+    if (lb.zoom) { setZoom(0); return; } // when zoomed, a click on the surround goes back
     closeViewer(); // a click on the dark surround closes the viewer
   });
   if (form) {
@@ -661,7 +727,7 @@
   // Swipe between photos on touch screens.
   var sx = null, sy = null;
   lbEl.addEventListener('touchstart', function (e) {
-    if (editing() || sharing() || deleting()) { sx = null; return; }
+    if (editing() || sharing() || deleting() || lb.zoom === 2) { sx = null; return; }
     sx = e.touches[0].clientX; sy = e.touches[0].clientY; wake();
   }, { passive: true });
   lbEl.addEventListener('touchend', function (e) {
