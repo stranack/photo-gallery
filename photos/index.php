@@ -100,7 +100,7 @@ head_html($title, $css); ?>
 </header>
 
 <nav class="bar" id="gallery" aria-label="Gallery">
-  <a class="bar-title" href="#" data-top><?= h($title) ?></a>
+  <a class="bar-title" href="./" data-top title="Main page"><?= h($title) ?></a>
   <div class="tabs" role="tablist" id="tabs"></div>
   <div class="bar-tools">
     <button class="icon-btn" id="play" type="button" title="Slideshow" aria-label="Play slideshow">

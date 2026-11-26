@@ -548,7 +548,17 @@
     var tile = t.closest('.tile');
     if (tile) { openViewer(currentPhotos(), tileIndex(tile), false); return; }
     if (t.closest('[data-scroll]')) { e.preventDefault(); $('gallery').scrollIntoView({ behavior: 'smooth' }); return; }
-    if (t.closest('[data-top]')) { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    if (t.closest('[data-top]')) {
+      // The title goes back to the main page: the cover, with the Albums page below.
+      e.preventDefault();
+      if (lb.open) closeViewer();
+      if (view !== 'albums') {
+        view = 'albums';
+        history.replaceState(null, '', location.pathname + location.search);
+        render();
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   });
   document.addEventListener('keydown', function (e) {
     var tile = e.target.closest && e.target.closest('.tile');
