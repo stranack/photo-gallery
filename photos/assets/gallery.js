@@ -311,8 +311,11 @@
     var c = p.cap || {};
     $('cap-title').textContent = c.title || '';
     $('cap-meta').textContent = [c.date, c.location].filter(Boolean).join(' · ');
-    $('cap-desc').textContent = c.description || '';
-    $('cap-desc').title = c.description || '';
+    // A description that only repeats the location isn't shown twice.
+    var key = function (x) { return String(x || '').toLowerCase().replace(/[^0-9a-z\u00c0-\uffff]+/g, ' ').trim(); };
+    var desc = c.description && key(c.description) !== key(c.location) ? c.description : '';
+    $('cap-desc').textContent = desc;
+    $('cap-desc').title = desc;
     var tg = $('cap-tags');
     if (tg) {
       tg.innerHTML = tagList(c).map(function (t) {

@@ -79,6 +79,9 @@ if ($photo === null) {
 }
 
 $cap = caption_fields($id, $photo['file']);
+if (same_place($cap['description'], $cap['location'])) {
+    $cap['description'] = ''; // don't show the place twice
+}
 $meta = implode(' · ', array_filter([$cap['date'], $cap['location']], fn($x) => $x !== ''));
 $heading = $cap['title'] !== '' ? $cap['title'] : ($meta !== '' ? $meta : $siteTitle);
 $base = site_base_url();

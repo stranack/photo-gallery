@@ -254,6 +254,17 @@ function import_captions(array $entries, bool $overwrite = false): array
                 $changed = true;
             }
         }
+        // Exports such as Flickr's often repeat the place as the description.
+        // A place-only description goes into the location instead.
+        if (same_place($fields['description'], $fields['location'])) {
+            $fields['description'] = '';
+            $changed = $changed || $cur['description'] !== '';
+        } elseif ($fields['description'] !== '' && looks_like_place($fields['description'])
+            && ($fields['location'] === '' || place_key($fields['description']) !== place_key($fields['location']) && str_contains(place_key($fields['description']), place_key($fields['location'])))) {
+            $fields['location'] = $fields['description'];
+            $fields['description'] = '';
+            $changed = true;
+        }
         if ($changed) {
             save_caption($h['id'], $fields, $h['file']);
             $captions = load_captions();
@@ -263,6 +274,24 @@ function import_captions(array $entries, bool $overwrite = false): array
         }
     }
     return $res;
+}
+
+/** Text reduced to lower-case words, for comparing places. */
+function place_key(string $s): string
+{
+    return trim((string) preg_replace('/[^\p{L}\p{N}]+/u', ' ', mb_strtolower($s)));
+}
+
+/** True when a description says no more than the location does. */
+function same_place(string $description, string $location): bool
+{
+    return $description !== '' && $location !== '' && place_key($description) === place_key($location);
+}
+
+/** A short "Town, Province, Country" line with no sentence punctuation. */
+function looks_like_place(string $s): bool
+{
+    return mb_strlen($s) < 80 && str_contains($s, ',') && !preg_match('/[.!?;:\n]/u', $s);
 }
 
 /** Find a photo's file name in the gallery index. */

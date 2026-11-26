@@ -74,7 +74,7 @@ php app/import.php captions.json --dry-run     # shows what would change
 php app/import.php captions.json
 ```
 
-Each entry is `{"file": "…", "title": "…", "description": "…", "tags": "A, B", "album": "…"}`. A photo is found by its file name; add `album` (name or slug) only if the same file name is in several albums. Tags are added to a photo's existing ones, and anything you've typed by hand is kept unless you add `--overwrite`.
+Each entry is `{"file": "…", "title": "…", "description": "…", "tags": "A, B", "album": "…"}`. A photo is found by its file name; add `album` (name or slug) only if the same file name is in several albums. Tags are added to a photo's existing ones, and anything you've typed by hand is kept unless you add `--overwrite`. A description that is only a place name (as Flickr exports often have, e.g. "Lang, Saskatchewan, Canada") goes into the location instead, so the place isn't shown twice.
 
 ## Sharing and downloads
 
