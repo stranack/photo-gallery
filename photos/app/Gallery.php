@@ -278,14 +278,161 @@ function photo_file(string $id): ?string
     return null;
 }
 
-/** The data the gallery page hands to its script. */
-function gallery_for_page(bool $owner): array
+// ---- Public and private albums ------------------------------------------
+// A public album can be seen by anyone, without the gallery password. A
+// private one needs the password. The owner switches each album with the
+// globe/lock button above its photos. Settings are kept in data/albums.json,
+// keyed by the album's folder name in Dropbox. An album with no setting yet
+// (a new folder, or a renamed one) is private until the owner makes it public.
+
+/** @return array<string, array{public:bool}> folder name => setting */
+function load_album_settings(): array
+{
+    if (!is_file(ALBUMS_FILE)) {
+        return seed_album_settings();
+    }
+    return read_json(ALBUMS_FILE, []);
+}
+
+/**
+ * The first time this runs (when public albums were added, November 2026),
+ * every album then in the gallery is made public except the Tabbernor album.
+ */
+function seed_album_settings(): array
+{
+    $albums = load_gallery()['albums'] ?? [];
+    if (!$albums) {
+        return [];
+    }
+    return with_album_settings(function (array $all) use ($albums) {
+        foreach ($albums as $a) {
+            $folder = (string) ($a['folder'] ?? $a['name']);
+            if (!isset($all[$folder])) {
+                $all[$folder] = ['public' => !preg_match('/tabbernor/i', $folder)];
+            }
+        }
+        return $all;
+    });
+}
+
+function with_album_settings(callable $change): array
+{
+    ensure_data_dir();
+    $fh = fopen(ALBUMS_FILE . '.lock', 'c');
+    if ($fh) {
+        flock($fh, LOCK_EX);
+    }
+    $all = $change(read_json(ALBUMS_FILE, []));
+    write_json(ALBUMS_FILE, $all);
+    if ($fh) {
+        flock($fh, LOCK_UN);
+        fclose($fh);
+    }
+    return $all;
+}
+
+function album_is_public(array $album, ?array $settings = null): bool
+{
+    $settings ??= load_album_settings();
+    return !empty($settings[(string) ($album['folder'] ?? $album['name'])]['public']);
+}
+
+/** Make an album (found by its slug) public or private. Returns false if there's no such album. */
+function set_album_public(string $slug, bool $public): bool
+{
+    load_album_settings(); // makes sure the first-time settings exist
+    foreach (load_gallery()['albums'] ?? [] as $a) {
+        if ($a['slug'] === $slug) {
+            $folder = (string) ($a['folder'] ?? $a['name']);
+            with_album_settings(function (array $all) use ($folder, $public) {
+                $all[$folder] = ['public' => $public];
+                return $all;
+            });
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * The cover someone without the password may see: the chosen cover if it's a
+ * loose image in the albums folder or sits in a public album, otherwise the
+ * first photo of the first public album. Null if no album is public.
+ */
+function public_cover(?array $g = null, ?array $settings = null): ?array
+{
+    $g ??= load_gallery();
+    $settings ??= load_album_settings();
+    $public = array_values(array_filter($g['albums'] ?? [], fn($a) => album_is_public($a, $settings)));
+    if (!$public) {
+        return null;
+    }
+    $cover = $g['cover'] ?? null;
+    if ($cover) {
+        $inPrivate = false;
+        foreach ($g['albums'] ?? [] as $a) {
+            foreach ($a['photos'] as $p) {
+                if ($p['id'] === $cover['id']) {
+                    if (album_is_public($a, $settings)) {
+                        return $cover;
+                    }
+                    $inPrivate = true;
+                }
+            }
+        }
+        if (!$inPrivate) {
+            return $cover; // a loose image in the albums folder, kept for the cover
+        }
+    }
+    $first = $public[0]['photos'][0] ?? null;
+    return $first ? ['id' => $first['id'], 'v' => $first['v']] : null;
+}
+
+/** Can someone without the password see this photo? */
+function photo_is_public(string $id): bool
+{
+    $g = load_gallery();
+    $settings = load_album_settings();
+    foreach ($g['albums'] ?? [] as $a) {
+        if (!album_is_public($a, $settings)) {
+            continue;
+        }
+        foreach ($a['photos'] as $p) {
+            if ($p['id'] === $id) {
+                return true;
+            }
+        }
+    }
+    return (public_cover($g, $settings)['id'] ?? null) === $id;
+}
+
+function any_public_album(): bool
+{
+    $settings = load_album_settings();
+    foreach (load_gallery()['albums'] ?? [] as $a) {
+        if (album_is_public($a, $settings)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * The data the gallery page hands to its script. Visitors with the password
+ * (and the owner) get every album; everyone else gets only the public ones.
+ */
+function gallery_for_page(bool $owner, bool $visitor = true): array
 {
     $g = load_gallery();
     $captions = load_captions();
     $shares = load_shares();
+    $settings = load_album_settings();
     $albums = [];
     foreach ($g['albums'] ?? [] as $a) {
+        $isPublic = album_is_public($a, $settings);
+        if (!$visitor && !$isPublic) {
+            continue;
+        }
         $photos = [];
         foreach ($a['photos'] as $p) {
             $row = [
@@ -304,11 +451,12 @@ function gallery_for_page(bool $owner): array
             }
             $photos[] = $row;
         }
-        $albums[] = ['slug' => $a['slug'], 'name' => $a['name'], 'photos' => $photos];
+        $albums[] = ['slug' => $a['slug'], 'name' => $a['name'], 'public' => $isPublic, 'photos' => $photos];
     }
+    $coverRow = $visitor ? ($g['cover'] ?? null) : public_cover($g, $settings);
     $cover = null;
-    if (!empty($g['cover']) && is_file(image_file($g['cover']['id'], 'large'))) {
-        $cover = 'img.php?id=' . $g['cover']['id'] . '&s=l&v=' . $g['cover']['v'];
+    if (!empty($coverRow) && is_file(image_file($coverRow['id'], 'large'))) {
+        $cover = 'img.php?id=' . $coverRow['id'] . '&s=l&v=' . $coverRow['v'];
     }
     return ['albums' => $albums, 'cover' => $cover, 'built' => $g['built_at'] ?? null];
 }
@@ -390,7 +538,15 @@ function find_photo(string $id): ?array
 /** Token the share panel sends back, so another site can't create links. */
 function share_csrf(): string
 {
-    return hash_hmac('sha256', 'share-csrf', is_owner() ? owner_token() : visitor_token());
+    if (is_owner()) {
+        return hash_hmac('sha256', 'share-csrf', owner_token());
+    }
+    if (is_visitor()) {
+        return hash_hmac('sha256', 'share-csrf', visitor_token());
+    }
+    // Someone looking at the public albums only. The key is made from the
+    // passwords, so it is never empty and changes along with them.
+    return hash_hmac('sha256', 'share-csrf-public', visitor_token() . owner_token());
 }
 
 /** A file name for downloads: the title if there is one, else the original name. */

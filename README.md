@@ -1,12 +1,13 @@
 # Photo Gallery
 
-A small PHP site that publishes albums of photographs from Dropbox as a private, password-protected gallery. It runs on ordinary shared hosting (I use Bluehost), and the look follows client-gallery services such as ShootProof: a full-screen cover photo, album tabs, a justified photo grid, a full-screen viewer and a slideshow.
+A small PHP site that publishes albums of photographs from Dropbox as a gallery. Each album is either public, open to anyone, or private, behind a password. It runs on ordinary shared hosting (I use Bluehost), and the look follows client-gallery services such as ShootProof: a full-screen cover photo, album tabs, a justified photo grid, a full-screen viewer and a slideshow.
 
 Once an hour the site checks the albums folder in Dropbox. It fetches web-sized copies of new or changed photos, removes copies of photos you've deleted and updates the albums. Your original files never leave Dropbox. The site changes nothing in Dropbox except when you, signed in as the owner, move a photo to the Trash.
 
 ## Features
 
-- A password page, then a cover photo with the gallery title and a **View gallery** button
+- A cover photo with the gallery title and a **View gallery** button
+- Public albums anyone can see, and private albums that need the gallery password (see [Public and private albums](#public-and-private-albums))
 - One tab per album, plus **Favourites**
 - Photos laid out in justified rows, so every photo keeps its shape
 - A full-screen viewer with arrows, keyboard keys (← → Esc, Space for the slideshow, F for favourite) and swiping on phones
@@ -32,6 +33,18 @@ A number at the start of the folder name sets the order of the tabs and isn't sh
 For the cover, the site uses an image placed directly in the albums folder. If there isn't one, it uses the first photo of the first album, or the file named in `cover_photo` in the settings.
 
 JPEG, PNG, GIF, WebP, TIFF, BMP and HEIC files are shown. Raw camera files (NEF, CR2, DNG and so on) are skipped, since Dropbox can't make previews of them.
+
+## Public and private albums
+
+Each album is **public** or **private**. Anyone who visits the gallery sees the public albums without a password. The private albums appear only after signing in with the gallery password (the **Sign in** button in the header, or `?signin=1`). If no album is public, visitors see the password page first, as before.
+
+Signed in as the owner, open an album: under its name is a button showing a globe (**Public**) or a lock (**Private**). Click it to switch. The change applies at once. Private albums also show a small lock on their tab, for the owner only.
+
+- When this feature was added, every album was made public except the Tabbernor album.
+- A new album folder starts out private until you make it public. Renaming an album's folder in Dropbox counts as a new album, so check its setting after a rename.
+- Without the password, the cover shows only a photo that is loose in the albums folder or in a public album. If your cover is in a private album, the first photo of the first public album is used instead.
+- Making an album private doesn't turn off share links already made for its photos. Use **Stop sharing** for those.
+- Settings are saved on the site in `data/albums.json`.
 
 ## Captions
 
@@ -104,6 +117,7 @@ photos/              upload this folder to your web space
   share.php          public page for a shared photo; creates and removes share links
   caption.php        saves captions you write (owner only)
   delete.php         moves a photo to the Trash folder (owner only)
+  album.php          makes an album public or private (owner only)
   admin.php          connect Dropbox, run a sync, check status
   cron.php           optional web-triggered sync
   app/               code and settings (blocked from the web); import.php adds captions in bulk
@@ -170,8 +184,8 @@ Until the secret exists, the workflow just notes that it skipped the deploy.
 
 ## Privacy
 
-- Visitors need the gallery password. Their browser stays signed in for 30 days (`remember_days`), and changing the password signs everyone out.
-- The photo copies are in `images/`, which is blocked from the web. Photos are only handed out through `img.php`, which checks the password on every request, so a copied photo address doesn't work for someone without the password.
+- Public albums are open to anyone with the address. Private albums need the gallery password. Visitors' browsers stay signed in for 30 days (`remember_days`), and changing the password signs everyone out.
+- The photo copies are in `images/`, which is blocked from the web. Photos are only handed out through `img.php`, which checks on every request that the photo is in a public album or that the visitor has the password, so a copied address of a private photo doesn't work for someone without it.
 - Pages ask search engines not to index them.
 - Favourites live in each visitor's browser. The site doesn't record who favourited what.
 - The `app/`, `data/` and `images/` folders are blocked by `.htaccess`. For extra separation, set `data_dir` in `config.php` to a folder outside your web space; the photo copies then go there too.

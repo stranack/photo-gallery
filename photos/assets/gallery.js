@@ -1,9 +1,11 @@
-/* Photo Gallery: albums, grid, viewer, slideshow, favourites, tags, captions, trash. */
+/* Photo Gallery: albums, grid, viewer, slideshow, favourites, tags, captions, trash, public/private albums. */
 (function () {
   'use strict';
 
   var G = window.GALLERY || { albums: [] };
   var $ = function (id) { return document.getElementById(id); };
+  var GLOBE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 12h17M12 3.5c2.3 2.4 3.4 5.2 3.4 8.5s-1.1 6.1-3.4 8.5c-2.3-2.4-3.4-5.2-3.4-8.5s1.1-6.1 3.4-8.5z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+  var LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 10.5V7.8a3.5 3.5 0 0 1 7 0v2.7" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
   var HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.6 13a4.7 4.7 0 0 1 6.6-6.7l.8.8.8-.8a4.7 4.7 0 0 1 6.6 6.7z"/></svg>';
 
   var byId = {};
@@ -105,7 +107,9 @@
     if (!tabs) return;
     var html = '';
     G.albums.forEach(function (a) {
-      html += '<button class="tab" role="tab" data-view="' + esc(a.slug) + '" aria-selected="' + (view === a.slug) + '">' + esc(a.name) + '</button>';
+      // The owner sees a small lock on private albums' tabs.
+      var lock = G.owner && !a['public'] ? '<span class="tab-lock" title="Private album">' + LOCK + '<span class="visually-hidden"> (private)</span></span>' : '';
+      html += '<button class="tab" role="tab" data-view="' + esc(a.slug) + '" aria-selected="' + (view === a.slug) + '">' + esc(a.name) + lock + '</button>';
     });
     if (allTags().length) {
       html += '<button class="tab" role="tab" data-view="tags" aria-selected="' + (view === 'tags') + '">Tags</button>';
@@ -133,11 +137,39 @@
       head.innerHTML = '<h2>' + (tagSel ? esc(tagSel) : 'Tags') + '</h2><p>' +
         (tagSel ? count(photos.length) : 'Choose a tag to see its photos') + '</p><div class="tag-cloud">' + chips + '</div>';
     } else if (currentAlbum()) {
-      head.innerHTML = '<h2>' + esc(currentAlbum().name) + '</h2><p>' + count(photos.length) + '</p>';
+      head.innerHTML = '<h2>' + esc(currentAlbum().name) + '</h2><p>' + count(photos.length) + '</p>' + visibilityButton(currentAlbum());
     } else {
       head.innerHTML = '';
     }
     layout();
+  }
+
+  // ---- Public or private album (owner only) ------------------------------
+  // Public albums are open to anyone; private ones need the gallery password.
+  function visibilityButton(a) {
+    if (!G.owner) return '';
+    var pub = !!a['public'];
+    return '<button type="button" class="vis-btn' + (pub ? ' is-public' : '') + '" id="vis-btn" data-slug="' + esc(a.slug) + '"' +
+      ' aria-pressed="' + pub + '" title="' + (pub ? 'Anyone can see this album. Click to make it private.' : 'Only people with the gallery password can see this album. Click to make it public.') + '">' +
+      (pub ? GLOBE : LOCK) + '<span>' + (pub ? 'Public' : 'Private') + '</span></button><p class="vis-msg" id="vis-msg" role="status"></p>';
+  }
+  function toggleVisibility(slug) {
+    var a = null;
+    G.albums.forEach(function (x) { if (x.slug === slug) a = x; });
+    if (!a) return;
+    var want = !a['public'];
+    var btn = $('vis-btn');
+    if (btn) btn.disabled = true;
+    var body = new URLSearchParams({ slug: slug, 'public': want ? '1' : '0' });
+    fetch('album.php', { method: 'POST', body: body, headers: { 'X-CSRF': G.csrf }, credentials: 'same-origin' })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not change the album'); return j; }, function () { throw new Error('Could not change the album (the server sent an error page).'); }); })
+      .then(function (j) {
+        a['public'] = !!j['public'];
+        render();
+        var m = $('vis-msg');
+        if (m) m.textContent = a['public'] ? 'Now public: anyone can see this album.' : 'Now private: the gallery password is needed.';
+      })
+      .catch(function (e) { if (btn) btn.disabled = false; var m = $('vis-msg'); if (m) m.textContent = e.message; });
   }
 
   // ---- Justified rows: every row fills the width, photos keep their shape
@@ -412,6 +444,8 @@
     var t = e.target;
     var fav = t.closest('.fav');
     if (fav) { e.stopPropagation(); toggleFav(fav.getAttribute('data-id')); return; }
+    var vis = t.closest('.vis-btn');
+    if (vis) { toggleVisibility(vis.getAttribute('data-slug')); return; }
     var chip = t.closest('.tag-chip');
     if (chip) { showTag(chip.getAttribute('data-tag')); return; }
     var tab = t.closest('.tab');

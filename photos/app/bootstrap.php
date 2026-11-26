@@ -42,6 +42,7 @@ define('IMAGE_DIR', DATA_DIR === APP_ROOT . '/data' ? APP_ROOT . '/images' : DAT
 define('GALLERY_FILE', DATA_DIR . '/gallery.json');
 define('CAPTIONS_FILE', DATA_DIR . '/captions.json');
 define('SHARES_FILE', DATA_DIR . '/shares.json');
+define('ALBUMS_FILE', DATA_DIR . '/albums.json');
 define('STATE_FILE', DATA_DIR . '/state.json');
 
 date_default_timezone_set($GLOBALS['CONFIG']['timezone'] ?: 'UTC');

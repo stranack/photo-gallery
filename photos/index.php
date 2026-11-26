@@ -35,7 +35,11 @@ if (isset($_GET['signout'])) {
 }
 
 $owner = is_owner();
-$allowed = is_visitor();
+$visitor = is_visitor();
+// Without the password, the page shows the public albums, if there are any.
+// ?signin shows the password page, for the private albums.
+$wantsSignin = isset($_GET['signin']) || $error !== null;
+$allowed = $visitor || (!$wantsSignin && gallery_password_usable() && any_public_album());
 $css = 'assets/style.css?v=' . @filemtime(__DIR__ . '/assets/style.css');
 $js = 'assets/gallery.js?v=' . @filemtime(__DIR__ . '/assets/gallery.js');
 
@@ -63,19 +67,21 @@ if (!$allowed):
   <?php if (!gallery_password_usable()): ?>
     <p class="gate-note">This gallery isn’t open yet. (Owner: set <code>gallery_password</code> in <code>app/config.php</code>.)</p>
   <?php else: ?>
-  <form method="post" class="gate-form">
+  <form method="post" class="gate-form" action="./">
     <label for="pw" class="visually-hidden">Gallery password</label>
     <input id="pw" type="password" name="password" placeholder="Password" autocomplete="current-password" required autofocus>
     <button type="submit" class="btn btn-solid">View gallery</button>
   </form>
   <?php if ($error): ?><p class="gate-error" role="alert"><?= h($error) ?></p><?php endif; ?>
+  <?php if (any_public_album()): ?><p class="gate-note"><a href="./">See the public albums</a></p><?php endif; ?>
   <?php endif; ?>
 </main>
 </body>
 </html>
 <?php exit; endif;
 
-$data = gallery_for_page($owner);
+$data = gallery_for_page($owner, $visitor);
+$data['signedIn'] = $visitor;
 $data['owner'] = $owner;
 $data['csrf'] = $owner ? owner_csrf() : null;
 $data['shareCsrf'] = share_csrf();
@@ -100,6 +106,7 @@ head_html($title, $css); ?>
     <button class="icon-btn" id="play" type="button" title="Slideshow" aria-label="Play slideshow">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg><span>Slideshow</span>
     </button>
+    <?php if (!$visitor): ?><a class="icon-btn" href="?signin=1" title="Sign in for more albums" aria-label="Sign in for more albums"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 10.5V7.8a3.5 3.5 0 0 1 7 0v2.7" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span>Sign in</span></a><?php endif; ?>
     <?php if ($owner): ?><a class="icon-btn" href="admin.php" title="Admin" aria-label="Admin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.07 5.27L10.56 2.91L13.44 2.91L13.93 5.27L15.39 5.88L17.41 4.56L19.44 6.59L18.12 8.61L18.73 10.07L21.09 10.56L21.09 13.44L18.73 13.93L18.12 15.39L19.44 17.41L17.41 19.44L15.39 18.12L13.93 18.73L13.44 21.09L10.56 21.09L10.07 18.73L8.61 18.12L6.59 19.44L4.56 17.41L5.88 15.39L5.27 13.93L2.91 13.44L2.91 10.56L5.27 10.07L5.88 8.61L4.56 6.59L6.59 4.56L8.61 5.88Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></a><?php endif; ?>
   </div>
 </nav>
@@ -115,7 +122,7 @@ head_html($title, $css); ?>
 <footer class="foot">
   <span>&copy; <?= date('Y') ?> <?= h($subtitle !== '' ? $subtitle : $title) ?></span>
   <a href="admin.php">Admin</a>
-  <a href="?signout=1">Sign out</a>
+  <?php if ($visitor): ?><a href="?signout=1">Sign out</a><?php else: ?><a href="?signin=1">Sign in for more albums</a><?php endif; ?>
 </footer>
 
 <div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Photo viewer">

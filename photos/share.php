@@ -5,7 +5,8 @@
  * the preview tags. The rest of the gallery stays behind the password.
  *
  * Also creates and removes share links (POST, JSON):
- *   action=create, id   anyone signed in to the gallery
+ *   action=create, id   anyone signed in to the gallery, or anyone at all
+ *                       for a photo in a public album
  *   action=remove, id   the owner only
  */
 declare(strict_types=1);
@@ -19,15 +20,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode($body);
         exit;
     };
-    if (!is_visitor()) {
-        $reply(403, ['error' => 'Sign in to the gallery first.']);
-    }
     if (!hash_equals(share_csrf(), (string) ($_SERVER['HTTP_X_CSRF'] ?? ''))) {
         $reply(403, ['error' => 'This page is out of date. Reload it and try again.']);
     }
     $id = (string) ($_POST['id'] ?? '');
     if (!preg_match('/^[0-9a-f]{16}$/', $id) || find_photo($id) === null) {
         $reply(404, ['error' => 'That photo is no longer in the gallery.']);
+    }
+    if (!is_visitor() && !photo_is_public($id)) {
+        $reply(403, ['error' => 'Sign in to the gallery first.']);
     }
     $action = (string) ($_POST['action'] ?? '');
     if ($action === 'create') {

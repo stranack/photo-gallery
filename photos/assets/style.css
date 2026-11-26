@@ -119,6 +119,21 @@ code { font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; bac
 .album-head { text-align: center; padding: clamp(2.2rem, 5vw, 3.6rem) 1rem clamp(1.6rem, 3vw, 2.4rem); }
 .album-head h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(1.6rem, 3.4vw, 2.3rem); letter-spacing: .06em; margin: 0; }
 .album-head p { margin: .5rem 0 0; color: var(--muted); font-size: .72rem; letter-spacing: .26em; text-transform: uppercase; }
+/* Owner's public/private switch under the album name, and the lock on private tabs */
+.vis-btn {
+  display: inline-flex; align-items: center; gap: .45em; margin-top: 1rem; padding: .45em .95em;
+  border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--muted); cursor: pointer;
+  font: inherit; font-size: .68rem; letter-spacing: .22em; text-transform: uppercase; transition: border-color .2s, color .2s;
+}
+.vis-btn svg { width: 15px; height: 15px; flex: none; }
+.vis-btn:hover { border-color: var(--ink); color: var(--ink); }
+.vis-btn.is-public { color: var(--ink); }
+.vis-btn:disabled { opacity: .5; cursor: progress; }
+.vis-btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.album-head .vis-msg { min-height: 1.2em; margin-top: .5rem; letter-spacing: .08em; text-transform: none; font-size: .78rem; }
+.tab-lock { display: inline-flex; opacity: .75; }
+.tab .tab-lock svg { width: 11px; height: 11px; }
+
 .grid { max-width: 1800px; margin: 0 auto; }
 .row { display: flex; gap: var(--gap); margin-bottom: var(--gap); }
 .tile {

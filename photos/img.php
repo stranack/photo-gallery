@@ -1,7 +1,8 @@
 <?php
 /*
- * Hands a photo to visitors who have the gallery password, or to anyone with
- * the share token of a photo that has been shared. The copies live in images/,
+ * Hands a photo to visitors who have the gallery password, to anyone if the
+ * photo is in a public album (or is the cover shown with them), or to anyone
+ * with the share token of a photo that has been shared. The copies live in images/,
  * which is blocked from the web, so these checks can't be skipped.
  *   &dl=1  sends it as a download, named after the photo's title.
  */
@@ -15,7 +16,7 @@ if (!preg_match('/^[0-9a-f]{16}$/', $id)) {
 }
 $token = (string) ($_GET['t'] ?? '');
 $shared = $token !== '' && share_photo($token) === $id;
-if (!$shared && !is_visitor()) {
+if (!$shared && !is_visitor() && !photo_is_public($id)) {
     http_response_code(403);
     exit;
 }
