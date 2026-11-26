@@ -210,7 +210,14 @@ head_html($title, $css); ?>
     <textarea id="cap-x" rows="3" maxlength="2000"></textarea>
     <label for="cap-g">Tags</label>
     <input id="cap-g" maxlength="1700" autocomplete="off" placeholder="e.g. Rural, Prairie, Grain elevator">
-    <p class="cap-hint">Separate tags with commas</p>
+    <p class="cap-hint">Type to find a tag, or press Enter (or a comma) to add a new one</p>
+    <label for="cap-album">Album</label>
+    <select id="cap-album"></select>
+    <p class="cap-hint" id="cap-album-hint">Choosing another album moves the photo there, in Dropbox too</p>
+    <fieldset class="cap-also">
+      <legend>Also show in</legend>
+      <div id="cap-also"></div>
+    </fieldset>
     <div class="cap-btns">
       <button type="submit" class="btn btn-solid">Save</button>
       <button type="button" class="btn btn-ghost" id="cap-reset">Use automatic</button>
@@ -222,7 +229,7 @@ head_html($title, $css); ?>
 </div>
 
 <script>window.GALLERY = <?= json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;</script>
-<?php if ($owner): ?><script src="assets/places.js?v=<?= h((string) @filemtime(__DIR__ . '/assets/places.js')) ?>"></script><?php endif; ?>
+<?php if ($owner): ?><script src="assets/tags.js?v=<?= h((string) @filemtime(__DIR__ . '/assets/tags.js')) ?>"></script><script src="assets/places.js?v=<?= h((string) @filemtime(__DIR__ . '/assets/places.js')) ?>"></script><?php endif; ?>
 <script src="<?= h($js) ?>"></script>
 </body>
 </html>

@@ -46,6 +46,7 @@
   if (!form) return;
   var list = $('up-list');
   var placeId = '';
+  var tagBox = window.TagInput ? window.TagInput($('up-tags'), function () { return A.tags || []; }) : null;
   if (window.PlaceSuggest) window.PlaceSuggest($('up-loc'), function (id) { placeId = id; });
   var files = []; // {file, li}
 
@@ -162,6 +163,7 @@
   var busy = false;
   form.addEventListener('submit', function (e) {
     e.preventDefault();
+    if (tagBox) tagBox.commit();
     var album = $('up-album').value;
     if (!album) { $('up-msg').textContent = 'Choose an album first.'; $('up-album').focus(); return; }
     var todo = files.filter(function (f) { return !f.done; });

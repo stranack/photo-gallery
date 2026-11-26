@@ -300,6 +300,25 @@ function looks_like_place(string $s): bool
     return mb_strlen($s) < 80 && str_contains($s, ',') && !preg_match('/[.!?;:\n]/u', $s);
 }
 
+/** Every tag in the gallery, alphabetically, for suggestions. */
+function all_tag_names(): array
+{
+    $out = [];
+    $captions = load_captions();
+    foreach (load_gallery()['albums'] ?? [] as $a) {
+        foreach ($a['photos'] as $p) {
+            foreach (explode(',', caption_fields($p['id'], $p['file'], $captions)['tags']) as $t) {
+                $t = trim($t);
+                if ($t !== '') {
+                    $out[mb_strtolower($t)] ??= $t;
+                }
+            }
+        }
+    }
+    natcasesort($out);
+    return array_values($out);
+}
+
 /** Find a photo's file name in the gallery index. */
 function photo_file(string $id): ?string
 {
@@ -412,6 +431,116 @@ function set_album_cover(string $photoId): ?string
     return null;
 }
 
+/** Ids of photos from other albums that are also shown in this one. */
+function album_also(array $album, array $settings): array
+{
+    $ids = $settings[(string) ($album['folder'] ?? $album['name'])]['also'] ?? [];
+    return is_array($ids) ? array_values(array_filter($ids, 'is_string')) : [];
+}
+
+/**
+ * Put a photo in albums: $home is the album its file should be in (moved in
+ * Dropbox if that's a change), $also the other albums it is also shown in.
+ * @param string[] $also album slugs
+ * @return array{id:string,home:string,also:string[],moved:bool,synced:bool}
+ */
+function set_photo_albums(string $id, string $home, array $also, AlbumSource $source): array
+{
+    $g = load_gallery();
+    $folderOf = [];
+    $current = null;
+    foreach ($g['albums'] ?? [] as $a) {
+        $folderOf[$a['slug']] = (string) ($a['folder'] ?? $a['name']);
+        foreach ($a['photos'] as $p) {
+            if ($p['id'] === $id) {
+                $current = $a['slug'];
+            }
+        }
+    }
+    if ($current === null) {
+        throw new RuntimeException('That photo is no longer in the gallery.');
+    }
+    if (!isset($folderOf[$home])) {
+        throw new RuntimeException('That album is no longer in the gallery.');
+    }
+    $also = array_values(array_unique(array_filter($also, fn($s) => isset($folderOf[$s]) && $s !== $home)));
+
+    $moved = false;
+    $synced = true;
+    $newId = $id;
+    if ($home !== $current) {
+        $state = read_json(STATE_FILE, []);
+        $key = null;
+        foreach ($state['images'] ?? [] as $k => $m) {
+            if (($m['id'] ?? '') === $id) {
+                $key = (string) $k;
+            }
+        }
+        if ($key === null) {
+            throw new RuntimeException('That photo is no longer in the gallery.');
+        }
+        $to = $source->moveImage($key, (string) $state['images'][$key]['path'], $folderOf[$home]);
+        $newId = photo_id($to['key']);
+        if ($newId !== $id) {
+            rename_photo_id($id, $newId); // only for a folder on this server; Dropbox keeps the file's id
+        }
+        log_line("Moved {$state['images'][$key]['path']} to {$to['path']}.");
+        $moved = true;
+    }
+
+    load_album_settings(); // makes sure the first-time settings exist
+    with_album_settings(function (array $all) use ($id, $newId, $also, $folderOf) {
+        foreach ($all as $folder => $s) {
+            if (isset($s['also'])) {
+                $all[$folder]['also'] = array_values(array_diff($s['also'], [$id, $newId]));
+                if (!$all[$folder]['also']) {
+                    unset($all[$folder]['also']);
+                }
+            }
+        }
+        foreach ($also as $slug) {
+            $folder = $folderOf[$slug];
+            $all[$folder] = ($all[$folder] ?? ['public' => false]);
+            $all[$folder]['also'][] = $newId;
+        }
+        return $all;
+    });
+
+    if ($moved) {
+        // Bring the gallery index up to date with the move.
+        $r = (new Sync($source))->run(20.0);
+        $synced = in_array($r['status'] ?? '', ['done', 'partial'], true);
+    }
+    return ['id' => $newId, 'home' => $home, 'also' => $also, 'moved' => $moved, 'synced' => $synced];
+}
+
+/** Carry a photo's caption, share link and album settings over to a new id. */
+function rename_photo_id(string $old, string $new): void
+{
+    $caps = read_json(CAPTIONS_FILE, []);
+    if (isset($caps[$old])) {
+        $caps[$new] = $caps[$old];
+        unset($caps[$old]);
+        write_json(CAPTIONS_FILE, $caps);
+    }
+    $shares = load_shares();
+    if (isset($shares[$old])) {
+        with_shares(function (array $all) use ($old, $new) {
+            $all[$new] = $all[$old];
+            unset($all[$old]);
+            return $all;
+        });
+    }
+    with_album_settings(function (array $all) use ($old, $new) {
+        foreach ($all as $f => $s) {
+            if (($s['cover'] ?? null) === $old) {
+                $all[$f]['cover'] = $new;
+            }
+        }
+        return $all;
+    });
+}
+
 /** The photo shown for an album on the Albums page: the chosen cover, else its first photo. */
 function album_cover_id(array $album, array $settings): ?string
 {
@@ -467,6 +596,9 @@ function photo_is_public(string $id): bool
         if (!album_is_public($a, $settings)) {
             continue;
         }
+        if (in_array($id, album_also($a, $settings), true)) {
+            return true; // also shown in this public album
+        }
         foreach ($a['photos'] as $p) {
             if ($p['id'] === $id) {
                 return true;
@@ -498,13 +630,37 @@ function gallery_for_page(bool $owner, bool $visitor = true): array
     $shares = load_shares();
     $settings = load_album_settings();
     $albums = [];
+    // Every photo, for albums it is also shown in, and (for the owner) which those are.
+    $byId = [];
+    $alsoOf = [];
+    foreach ($g['albums'] ?? [] as $a) {
+        foreach ($a['photos'] as $p) {
+            $byId[$p['id']] = $p;
+        }
+        foreach (album_also($a, $settings) as $xid) {
+            $alsoOf[$xid][] = $a['slug'];
+        }
+    }
     foreach ($g['albums'] ?? [] as $a) {
         $isPublic = album_is_public($a, $settings);
         if (!$visitor && !$isPublic) {
             continue;
         }
+        // Its own photos, then photos from other albums also shown here, in file-name order.
+        $list = $a['photos'];
+        $own = array_flip(array_column($a['photos'], 'id'));
+        $extra = false;
+        foreach (album_also($a, $settings) as $xid) {
+            if (isset($byId[$xid]) && !isset($own[$xid])) {
+                $list[] = $byId[$xid] + ['also' => true];
+                $extra = true;
+            }
+        }
+        if ($extra) {
+            usort($list, fn($x, $y) => strnatcasecmp($x['file'], $y['file']));
+        }
         $photos = [];
-        foreach ($a['photos'] as $p) {
+        foreach ($list as $p) {
             $row = [
                 'id'  => $p['id'],
                 'w'   => $p['w'],
@@ -518,6 +674,10 @@ function gallery_for_page(bool $owner, bool $visitor = true): array
                 $row['auto'] = auto_fields($p['file']);
                 $row['custom'] = isset($captions[$p['id']]);
                 $row['file'] = $p['file'];
+                $row['also'] = $alsoOf[$p['id']] ?? [];
+                if (empty($p['also'])) {
+                    $row['home'] = $a['slug']; // the album its file is in
+                }
             }
             $photos[] = $row;
         }

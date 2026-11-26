@@ -238,7 +238,7 @@
 
   function openViewer(list, i, play) {
     if (!list.length) return;
-    lb.list = list;
+    lb.list = list.slice(); // a copy, so album changes behind the viewer don't shift it
     lb.i = i;
     lb.open = true;
     lbEl.hidden = false;
@@ -459,8 +459,10 @@
     $('cap-l').value = c.location || '';
     $('cap-x').value = c.description || '';
     $('cap-g').value = c.tags || '';
+    if (tagBox) tagBox.refresh();
     placeId = c.place_id || '';
     if (placeBox) placeBox.set(placeId);
+    fillAlbums(p);
     hint('cap-d', auto.date);
     hint('cap-l', auto.location);
     $('cap-reset').hidden = !p.custom;
@@ -486,6 +488,7 @@
   }
   function closeEditor() { if (form) form.hidden = true; }
   function saveCaption(reset) {
+    if (tagBox) tagBox.commit();
     var p = lb.list[lb.i];
     var body = new URLSearchParams();
     body.set('id', p.id);
@@ -504,14 +507,88 @@
       .then(function (j) {
         p.cap = j.caption;
         p.custom = j.custom;
+        return reset ? null : saveAlbums(p);
+      })
+      .then(function () {
         renderCaption(p);
         closeEditor();
-        renderTabs();
+        render();
         var t = document.querySelector('.tile[data-id="' + p.id + '"]');
         if (t) t.setAttribute('aria-label', label(p) || 'Photo');
       })
       .catch(function (e) { $('cap-msg').textContent = e.message; });
   }
+
+  // ---- Which albums a photo is in (owner only) --------------------------
+  // Album: where its file is (changing it moves the file in Dropbox).
+  // Also show in: other albums it appears in as well.
+  function homeOf(p) {
+    if (p.home) return p.home;
+    for (var i = 0; i < G.albums.length; i++) {
+      if (G.albums[i].photos.indexOf(p) >= 0) return G.albums[i].slug;
+    }
+    return '';
+  }
+  function fillAlbums(p) {
+    var sel = $('cap-album'), box = $('cap-also');
+    if (!sel) return;
+    var home = homeOf(p), also = p.also || [];
+    sel.innerHTML = G.albums.map(function (a) {
+      return '<option value="' + esc(a.slug) + '"' + (a.slug === home ? ' selected' : '') + '>' + esc(a.name) + (a['public'] ? '' : ' (private)') + '</option>';
+    }).join('');
+    var draw = function () {
+      var h = sel.value;
+      box.innerHTML = G.albums.filter(function (a) { return a.slug !== h; }).map(function (a) {
+        var on = also.indexOf(a.slug) >= 0;
+        return '<label><input type="checkbox" value="' + esc(a.slug) + '"' + (on ? ' checked' : '') + '> ' + esc(a.name) + '</label>';
+      }).join('');
+      $('cap-album-hint').textContent = h === home ? 'Choosing another album moves the photo there, in Dropbox too'
+        : 'Saving moves the photo to ' + sel.options[sel.selectedIndex].text.replace(' (private)', '') + ', in Dropbox too';
+    };
+    sel.onchange = function () {
+      also = Array.prototype.map.call(box.querySelectorAll('input:checked'), function (c) { return c.value; });
+      draw();
+    };
+    draw();
+  }
+  function saveAlbums(p) {
+    var sel = $('cap-album');
+    if (!sel) return null;
+    var home = sel.value, was = homeOf(p);
+    var also = Array.prototype.map.call($('cap-also').querySelectorAll('input:checked'), function (c) { return c.value; });
+    var before = (p.also || []).slice().sort().join(',');
+    if (home === was && also.slice().sort().join(',') === before) return null;
+    $('cap-msg').textContent = home !== was ? 'Moving the photo…' : 'Saving albums…';
+    var body = new URLSearchParams({ action: 'place', id: p.id, home: home });
+    also.forEach(function (s) { body.append('also[]', s); });
+    return fetch('album.php', { method: 'POST', body: body, headers: { 'X-CSRF': G.csrf }, credentials: 'same-origin' })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not change the albums'); return j; }, function () { throw new Error('Could not change the albums (the server sent an error page).'); }); })
+      .then(function (j) {
+        if (j.id !== p.id) { location.reload(); return; } // only with a folder on the server
+        // Take every copy of the photo out of the albums, then put it where it now belongs.
+        G.albums.forEach(function (a) {
+          for (var k = a.photos.length - 1; k >= 0; k--) if (a.photos[k].id === p.id) a.photos.splice(k, 1);
+        });
+        p.home = j.home;
+        p.also = j.also;
+        [j.home].concat(j.also).forEach(function (slug) {
+          G.albums.forEach(function (a) {
+            if (a.slug !== slug) return;
+            a.photos.push(p);
+            a.photos.sort(function (x, y) { return String(x.file).localeCompare(String(y.file), undefined, { numeric: true, sensitivity: 'base' }); });
+          });
+        });
+        if (j.moved && !j.synced) flash('Moved. The gallery catches up at the next sync');
+        else if (j.moved) flash('Moved to ' + albumName(j.home));
+      });
+  }
+  function albumName(slug) {
+    for (var i = 0; i < G.albums.length; i++) if (G.albums[i].slug === slug) return G.albums[i].name;
+    return slug;
+  }
+
+  // Tags as chips, suggesting tags already in the gallery, or adding a new one.
+  var tagBox = form && window.TagInput ? window.TagInput($('cap-g'), function () { return allTags().map(function (t) { return t.name; }); }) : null;
 
   // Place-name suggestions in the editor's Location box (from GeoNames).
   var placeId = '';

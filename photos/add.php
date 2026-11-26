@@ -124,6 +124,7 @@ $js = 'assets/add.js?v=' . @filemtime(__DIR__ . '/assets/add.js');
 $page = [
     'csrf' => owner_csrf(),
     'chunk' => upload_chunk_bytes(),
+    'tags' => all_tag_names(),
 ];
 ?><!doctype html>
 <html lang="en">
@@ -203,6 +204,7 @@ $page = [
 <?php endif; ?>
 </main>
 <script>window.ADD = <?= json_encode($page, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) ?>;</script>
+<script src="assets/tags.js?v=<?= h((string) @filemtime(__DIR__ . '/assets/tags.js')) ?>"></script>
 <script src="assets/places.js?v=<?= h((string) @filemtime(__DIR__ . '/assets/places.js')) ?>"></script>
 <script src="<?= h($js) ?>"></script>
 </body>

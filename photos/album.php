@@ -5,6 +5,10 @@
  *   POST slug, public=1|0      makes an album public (open to anyone, without
  *                              the gallery password) or private
  *   POST action=cover, id      makes a photo its album's cover on the Albums page
+ *   POST action=place, id, home, also[]
+ *                              puts a photo in album "home" (moving its file in
+ *                              Dropbox if that's a change) and also shows it in
+ *                              the albums in "also" (slugs)
  */
 declare(strict_types=1);
 require __DIR__ . '/app/bootstrap.php';
@@ -27,6 +31,20 @@ if (!is_owner()) {
 }
 if (!hash_equals(owner_csrf(), (string) ($_SERVER['HTTP_X_CSRF'] ?? ''))) {
     reply(403, ['error' => 'This page is out of date. Reload it and try again.']);
+}
+if (($_POST['action'] ?? '') === 'place') {
+    $id = (string) ($_POST['id'] ?? '');
+    if (!preg_match('/^[0-9a-f]{16}$/', $id)) {
+        reply(400, ['error' => 'Unknown photo']);
+    }
+    @set_time_limit(60);
+    try {
+        $also = array_map('strval', (array) ($_POST['also'] ?? []));
+        reply(200, set_photo_albums($id, (string) ($_POST['home'] ?? ''), $also, make_source()));
+    } catch (Throwable $e) {
+        log_line('Album change: ' . $e->getMessage());
+        reply(500, ['error' => $e->getMessage()]);
+    }
 }
 if (($_POST['action'] ?? '') === 'cover') {
     $id = (string) ($_POST['id'] ?? '');

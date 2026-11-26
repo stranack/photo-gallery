@@ -82,9 +82,16 @@ The Location boxes (in the caption editor and on the Add image page) suggest pla
 
 It needs a free GeoNames account: register at geonames.org, enable **Free Web Services** on your account page, then enter the username under **Place names** on the admin page (or set `geonames_username` in `config.php`). Only the owner's typing uses it, and answers are kept for a month, well within GeoNames' free allowance. GeoNames data is CC-BY, credited in the suggestion list and by the location links.
 
+## Moving photos between albums
+
+The caption editor (the pencil, signed in as the owner) has two more parts:
+
+- **Album** is where the photo's file is. Choosing another album and saving moves the file to that album's folder in Dropbox; its caption, favourites, share link and cover choice stay with it, since Dropbox keeps the file's id.
+- **Also show in** shows the photo in other albums as well, without copying the file. It appears there in file-name order, and the album's photo count includes it. A photo also shown in a public album can be seen by anyone, even if its own album is private.
+
 ## Tags
 
-Each photo can also have **tags**: short labels such as "Rural", "Churches" or "Prairie". Add them in the caption editor (the pencil), separated by commas. They show as small chips under the photo in the full-screen view, and a **Tags** tab appears once any photo has a tag. The tab lists every tag with its photo count; choosing one shows that tag's photos from all albums. A chip in the viewer jumps to the same list, and `#tags/Rural` in the address opens it directly.
+Each photo can also have **tags**: short labels such as "Rural", "Churches" or "Prairie". Add them in the caption editor (the pencil) or on the Add image page: type to pick a tag already in the gallery, or press Enter (or a comma) to add a new one; × removes a tag. They show as small chips under the photo in the full-screen view, and a **Tags** tab appears once any photo has a tag. The tab lists every tag with its photo count; choosing one shows that tag's photos from all albums. A chip in the viewer jumps to the same list, and `#tags/Rural` in the address opens it directly.
 
 To fill in titles, descriptions and tags for many photos at once (for example from a Flickr export), put them in a JSON file and run the importer on the server after a sync:
 

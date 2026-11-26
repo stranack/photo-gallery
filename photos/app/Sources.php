@@ -40,6 +40,13 @@ interface AlbumSource
     public function trashImage(string $key, string $path): string;
 
     /**
+     * Move one image into another album folder, keeping its file name (a
+     * name already taken there gets a number added).
+     * @return array{key:string,path:string} as listImages() would give them
+     */
+    public function moveImage(string $key, string $path, string $toFolder): array;
+
+    /**
      * The album folders directly inside the albums folder, empty ones included.
      * @return string[] folder names
      */
@@ -129,6 +136,21 @@ final class LocalSource implements AlbumSource
             throw new RuntimeException('Could not move the photo to the Trash folder.');
         }
         return $to;
+    }
+
+    public function moveImage(string $key, string $path, string $toFolder): array
+    {
+        $from = $this->root . '/' . $path;
+        if ($path === '' || str_contains('/' . $path . '/', '/../') || !is_file($from)) {
+            throw new RuntimeException('That photo is no longer in the albums folder.');
+        }
+        $dir = $this->root . '/' . $toFolder;
+        $name = free_local_name($dir, basename($path));
+        if (!@rename($from, $dir . '/' . $name)) {
+            throw new RuntimeException('Could not move the photo.');
+        }
+        $rel = $toFolder . '/' . $name;
+        return ['key' => 'local:' . $rel, 'path' => $rel];
     }
 
     public function listAlbumFolders(): array
@@ -355,6 +377,26 @@ final class DropboxSource implements AlbumSource
             throw $e;
         }
         return (string) ($r['metadata']['path_display'] ?? trash_path() . '/' . $path);
+    }
+
+    public function moveImage(string $key, string $path, string $toFolder): array
+    {
+        // The file id follows the photo even if it was renamed since the last sync.
+        $from = str_starts_with($key, 'id:') ? $key : $this->albumsPath . '/' . $path;
+        try {
+            $r = $this->writeCall(fn() => $this->rpc('/2/files/move_v2', [
+                'from_path'  => $from,
+                'to_path'    => $this->albumsPath . '/' . $toFolder . '/' . basename($path),
+                'autorename' => true,
+            ]));
+        } catch (RuntimeException $e) {
+            if (str_contains($e->getMessage(), 'from_lookup/not_found')) {
+                throw new RuntimeException('That photo is no longer in Dropbox. A sync will take it off the site.');
+            }
+            throw $e;
+        }
+        $m = $r['metadata'] ?? [];
+        return ['key' => (string) ($m['id'] ?? $key), 'path' => $toFolder . '/' . (string) ($m['name'] ?? basename($path))];
     }
 
     public function listAlbumFolders(): array
